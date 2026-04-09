@@ -39,7 +39,7 @@
   }
   body::after {
     content: ''; position: fixed; inset: 0; opacity: 0.02;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4[...]
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size: 200px; pointer-events: none; z-index: 1;
   }
 
@@ -418,6 +418,15 @@
 </div>
 
 <script>
+/*
+  Архитектура:
+  - Каждый пользователь регистрируется в PeerJS как "room__nick__randomid"
+  - Хост (создатель) регистрируется как "void-HOST-roomname"
+  - Гость ищет хоста по этому ID и звонит ему
+  - Голос: через PeerJS MediaConnection
+  - Чат: через PeerJS DataConnection
+*/
+
 const PEER_CONFIG = {
   host: '0.peerjs.com',
   port: 443,
@@ -440,10 +449,8 @@ let myNick = 'anon';
 let friendNick = 'друг';
 let room = '';
 let isHost = false;
-let guestRetryCount = 0;
-let hostRetryTimeout = null;
-const MAX_GUEST_RETRIES = 4;
 
+// UI helpers
 const $ = id => document.getElementById(id);
 function setLog(msg, cls='') {
   const el = $('log');
@@ -475,6 +482,7 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Enter keys
 $('roomInput').addEventListener('keydown', e => { if (e.key==='Enter') joinRoom(); });
 $('chatIn').addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
 
@@ -503,10 +511,12 @@ async function joinRoom() {
   }
 
   setLog('— подключаемся к серверу —');
-  guestRetryCount = 0;
-  clearTimeout(hostRetryTimeout);
 
+  // Host peer ID = "void--ROOM" (stable, known ID)
+  // We try to claim it first; if taken, we are the guest
   const hostPeerId = 'void--' + room;
+
+  // Try to connect as host
   tryAsHost(hostPeerId);
 }
 
@@ -515,10 +525,12 @@ function tryAsHost(hostPeerId) {
   myPeer = new Peer(hostPeerId, PEER_CONFIG);
 
   myPeer.on('open', id => {
+    // We got the host ID — we are the host
     setLog('', 'ok');
     enterCallUI();
     sysMsg('Ты создал комнату #' + room + ' как @' + myNick);
 
+    // Wait for incoming calls
     myPeer.on('call', call => {
       call.answer(localStream);
       mediaConn = call;
@@ -533,6 +545,7 @@ function tryAsHost(hostPeerId) {
 
   myPeer.on('error', err => {
     if (err.type === 'unavailable-id') {
+      // Host slot taken — we are the guest
       myPeer.destroy();
       joinAsGuest(hostPeerId);
     } else {
@@ -543,6 +556,7 @@ function tryAsHost(hostPeerId) {
 
 function joinAsGuest(hostPeerId) {
   isHost = false;
+  // Guest gets random peer ID
   const guestId = 'void-guest-' + Math.random().toString(36).slice(2,8);
   myPeer = new Peer(guestId, PEER_CONFIG);
 
@@ -551,12 +565,14 @@ function joinAsGuest(hostPeerId) {
     enterCallUI();
     sysMsg('Ты вошёл в комнату #' + room + ' как @' + myNick);
 
+    // Call host for voice
     const call = myPeer.call(hostPeerId, localStream, {
       metadata: { nick: myNick }
     });
     mediaConn = call;
     handleMediaConn(call);
 
+    // Data channel for chat
     const conn = myPeer.connect(hostPeerId, {
       metadata: { nick: myNick },
       reliable: true
@@ -566,23 +582,15 @@ function joinAsGuest(hostPeerId) {
 
     conn.on('open', () => {
       conn.send({ type: 'hello', nick: myNick });
-      guestRetryCount = 0;
     });
   });
 
   myPeer.on('error', err => {
     if (err.type === 'peer-unavailable') {
-      guestRetryCount++;
-      if (guestRetryCount <= MAX_GUEST_RETRIES) {
-        const delay = 300 * Math.pow(1.8, guestRetryCount - 1);
-        setLog(`⏱ Ищем хоста... (${guestRetryCount}/${MAX_GUEST_RETRIES})`, 'err');
-        myPeer.destroy();
-        setTimeout(() => joinAsGuest(hostPeerId), delay);
-      } else {
-        setLog('⚠ Хост не отвечает. Становимся хостом...', 'err');
-        myPeer.destroy();
-        hostRetryTimeout = setTimeout(() => tryAsHost('void--' + room), 1200);
-      }
+      setLog('⚠ Хост не найден. Создаём новую комнату...', 'err');
+      myPeer.destroy();
+      // Retry as host with slight delay
+      setTimeout(() => tryAsHost('void--' + room), 800);
     } else {
       setLog('❌ ' + err.message, 'err');
     }
@@ -605,6 +613,7 @@ function handleMediaConn(call) {
 
 function setupDataConn(conn) {
   conn.on('open', () => {
+    // host side: greet back
     if (isHost) {
       conn.send({ type: 'hello', nick: myNick });
     }
@@ -662,14 +671,12 @@ function toggleMic() {
 }
 
 function hangup() {
-  clearTimeout(hostRetryTimeout);
   mediaConn?.close();
   dataConn?.close();
   myPeer?.destroy();
   localStream?.getTracks().forEach(t => t.stop());
   mediaConn = dataConn = myPeer = localStream = null;
   isMuted = false;
-  guestRetryCount = 0;
 
   document.body.classList.remove('in-call');
   $('friendParticipant').style.display = 'none';
@@ -700,6 +707,7 @@ function sendChat() {
   }
 }
 
+// Auto-join from URL hash
 window.addEventListener('load', () => {
   const hash = decodeURIComponent(location.hash.slice(1));
   if (hash) $('roomInput').value = hash;
