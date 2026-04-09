@@ -1319,12 +1319,6 @@ function handleMediaConn(call, peerId) {
     sysMsg('⚠ ошибка соединения: ' + e.message);
   });
 }
-  });
-  
-  call.on('error', e => {
-    sysMsg('⚠ ошибка соединения: ' + e.message);
-  });
-}
 
 function showScreenShare(peerId, stream, nick) {
   console.log('showScreenShare called for', peerId, 'video tracks:', stream.getVideoTracks().length);
