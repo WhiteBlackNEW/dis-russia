@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Void — Voice Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --surface3: #1c1c28;
+    --border: rgba(255,255,255,0.06);
+    --border-bright: rgba(255,255,255,0.14);
+    --accent: #7c6af7;
+    --accent2: #4fc8a8;
+    --accent3: #f76a8a;
+    --text: #e8e8f0;
+    --muted: #5a5a72;
+    --muted2: #3a3a50;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 600px 400px at 15% 50%, rgba(124,106,247,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 500px 300px at 85% 20%, rgba(79,200,168,0.05) 0%, transparent 70%),
+      radial-gradient(ellipse 400px 500px at 70% 85%, rgba(247,106,138,0.04) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0; opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px; pointer-events: none; z-index: 1;
+  }
+
+  .app { position: relative; z-index: 2; width: 460px; max-width: calc(100vw - 24px); }
+
+  .wordmark {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 28px; padding: 0 4px;
+    animation: fadeUp 0.3s ease;
+  }
+  .wordmark-text { font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #fff; }
+  .wordmark-tag {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
+    padding: 2px 8px; border: 1px solid rgba(124,106,247,0.3); border-radius: 2px;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; position: relative;
+    animation: fadeUp 0.4s ease;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(124,106,247,0.5), transparent);
+  }
+
+  .panel { padding: 22px 24px; }
+  .panel + .panel { border-top: 1px solid var(--border); }
+
+  .panel-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .field { margin-bottom: 14px; }
+  .field-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 7px; display: block;
+  }
+  .input-wrap { position: relative; }
+  .input-prefix {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    font-family: 'Space Mono', monospace; font-size: 13px;
+    color: var(--muted); pointer-events: none; transition: color 0.2s;
+  }
+  .input-wrap:focus-within .input-prefix { color: var(--accent); }
+
+  input[type="text"] {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 11px 14px 11px 30px;
+    color: var(--text); font-family: 'Space Mono', monospace;
+    font-size: 13px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s; letter-spacing: 0.3px;
+  }
+  input[type="text"]::placeholder { color: var(--muted); }
+  input[type="text"]:focus {
+    border-color: rgba(124,106,247,0.45);
+    box-shadow: 0 0 0 3px rgba(124,106,247,0.08);
+  }
+
+  .join-row { display: flex; gap: 8px; }
+  .join-row .input-wrap { flex: 1; }
+  .join-row button { flex-shrink: 0; }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 16px 0;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: 2px;
+  }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .btn {
+    font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px;
+    padding: 11px 18px; border-radius: 8px; border: none;
+    cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px;
+    white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-accent {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 4px 16px rgba(124,106,247,0.28); width: 100%;
+    justify-content: center;
+  }
+  .btn-accent:hover { background: #8d7ef8; box-shadow: 0 4px 20px rgba(124,106,247,0.42); }
+  .btn-ghost {
+    background: var(--surface2); color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--border-bright); color: var(--text); }
+
+  .log-line {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--muted); text-align: center; min-height: 18px; margin-top: 12px;
+  }
+
+  /* ===== CALL VIEW ===== */
+  .idle-view { display: block; }
+  .call-view { display: none; }
+  body.in-call .idle-view { display: none; }
+  body.in-call .call-view { display: block; }
+
+  /* Participants */
+  .participants { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .participant {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; transition: border-color 0.3s;
+  }
+  .participant.connected { border-color: rgba(79,200,168,0.2); }
+
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; font-family: 'Space Mono', monospace;
+    flex-shrink: 0; position: relative;
+  }
+  .avatar.you { background: rgba(124,106,247,0.18); color: var(--accent); border: 1px solid rgba(124,106,247,0.3); }
+  .avatar.friend-av { background: rgba(79,200,168,0.12); color: var(--accent2); border: 1px solid rgba(79,200,168,0.3); }
+  .avatar.waiting-av { background: transparent; color: var(--muted2); border: 1px dashed var(--muted2); font-size: 14px; }
+  .avatar-ring { position: absolute; inset: -3px; border-radius: 50%; border: 1.5px solid transparent; }
+  .you .avatar-ring { border-color: rgba(124,106,247,0.3); }
+  .friend-av .avatar-ring { border-color: rgba(79,200,168,0.3); animation: spin 4s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .participant-info { flex: 1; min-width: 0; }
+  .participant-name { font-weight: 600; font-size: 13px; line-height: 1; margin-bottom: 3px; }
+  .participant-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.3px; }
+  .participant-sub.live { color: var(--accent2); }
+  .participant-sub.wait { color: var(--muted2); }
+
+  .visualizer { display: flex; align-items: center; gap: 3px; height: 26px; flex-shrink: 0; }
+  .bar { width: 3px; border-radius: 2px; background: var(--accent); opacity: 0.6; animation: wave 1.2s ease-in-out infinite; }
+  .bar:nth-child(1){height:8px;animation-delay:0s}
+  .bar:nth-child(2){height:18px;animation-delay:.12s}
+  .bar:nth-child(3){height:26px;animation-delay:.22s}
+  .bar:nth-child(4){height:14px;animation-delay:.32s}
+  .bar:nth-child(5){height:20px;animation-delay:.08s}
+  .bar.muted { animation: none; height: 3px !important; opacity: 0.35; background: var(--accent3); }
+  .bar.fb { background: var(--accent2); }
+  @keyframes wave { 0%,100%{transform:scaleY(0.3);opacity:0.3} 50%{transform:scaleY(1);opacity:0.75} }
+
+  /* Invite */
+  .invite-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; margin-bottom: 16px;
+  }
+  .invite-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+  }
+  .invite-row { display: flex; gap: 8px; }
+  .invite-url {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; color: var(--accent);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    outline: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .btn-copy {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    padding: 7px 12px; background: rgba(124,106,247,0.1);
+    color: var(--accent); border: 1px solid rgba(124,106,247,0.2);
+    border-radius: 6px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-copy:hover { background: rgba(124,106,247,0.22); }
+
+  /* Controls */
+  .controls {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .ctrl-btn {
+    width: 40px; height: 40px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s; font-size: 15px; flex-shrink: 0;
+  }
+  .ctrl-btn:hover { border-color: var(--border-bright); background: rgba(255,255,255,0.03); }
+  .ctrl-btn:active { transform: scale(0.95); }
+  .ctrl-btn.muted-on { background: rgba(247,106,138,0.12); border-color: rgba(247,106,138,0.3); }
+  .ctrl-hangup { background: rgba(247,106,138,0.1); border-color: rgba(247,106,138,0.2); }
+  .ctrl-hangup:hover { background: rgba(247,106,138,0.28); border-color: rgba(247,106,138,0.5); }
+  .ctrl-info {
+    flex: 1; text-align: center;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: 0.5px;
+  }
+  .ctrl-info span { color: var(--accent2); }
+
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted2); flex-shrink: 0; transition: all 0.3s;
+  }
+  .status-dot.live {
+    background: var(--accent2); box-shadow: 0 0 8px var(--accent2);
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ===== CHAT ===== */
+  .chat-wrap { border-top: 1px solid var(--border); }
+  .chat-head {
+    padding: 12px 24px 0;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chat-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .chat-msgs {
+    height: 190px; overflow-y: auto;
+    padding: 10px 24px; display: flex; flex-direction: column; gap: 7px;
+    scroll-behavior: smooth;
+  }
+  .chat-msgs::-webkit-scrollbar { width: 3px; }
+  .chat-msgs::-webkit-scrollbar-track { background: transparent; }
+  .chat-msgs::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
+
+  .msg { display: flex; gap: 9px; align-items: flex-start; animation: fadeUp 0.2s ease; }
+  .msg-av {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; font-family: 'Space Mono', monospace;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .msg-av.mine { background: rgba(124,106,247,0.2); color: var(--accent); }
+  .msg-av.theirs { background: rgba(79,200,168,0.15); color: var(--accent2); }
+  .msg-av.sys { background: rgba(58,58,80,0.4); color: var(--muted); font-size: 11px; }
+
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-nick {
+    font-family: 'Space Mono', monospace; font-size: 10px; margin-bottom: 2px; letter-spacing: 0.3px;
+  }
+  .msg-nick.mine { color: var(--accent); }
+  .msg-nick.theirs { color: var(--accent2); }
+  .msg-text { font-size: 13px; line-height: 1.5; color: var(--text); word-break: break-word; }
+  .msg-text.sys { color: var(--muted); font-style: italic; font-size: 12px; }
+
+  .chat-input-row {
+    display: flex; gap: 8px; padding: 10px 24px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .chat-in {
+    flex: 1; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 13px; color: var(--text);
+    font-family: 'Syne', sans-serif; font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .chat-in:focus { border-color: rgba(124,106,247,0.4); }
+  .chat-in::placeholder { color: var(--muted); }
+  .send-btn {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: var(--accent); border: none; color: #fff; font-size: 15px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .send-btn:hover { background: #8d7ef8; }
+  .send-btn:active { transform: scale(0.94); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+  audio { display: none; }
+</style>
+</head>
+<body>
+<audio id="remoteAudio" autoplay></audio>
+
+<div class="app">
+  <div class="wordmark">
+    <span class="wordmark-text">void</span>
+    <span class="wordmark-tag">voice</span>
+  </div>
+
+  <div class="card">
+
+    <!-- ===== IDLE ===== -->
+    <div class="idle-view">
+      <div class="panel">
+        <div class="panel-label">Профиль</div>
+        <div class="field">
+          <label class="field-label">Твой ник</label>
+          <div class="input-wrap">
+            <span class="input-prefix">@</span>
+            <input type="text" id="nickInput" placeholder="anon" maxlength="20" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+
+        <div class="divider">комната</div>
+
+        <div class="field">
+          <label class="field-label">Создать новую</label>
+          <button class="btn btn-accent" onclick="createRoom()">
+            <span style="font-size:16px;line-height:1">+</span> Создать комнату
+          </button>
+        </div>
+
+        <div class="divider">или войти</div>
+
+        <div class="field">
+          <label class="field-label">По названию</label>
+          <div class="join-row">
+            <div class="input-wrap">
+              <span class="input-prefix">#</span>
+              <input type="text" id="roomInput" placeholder="название-комнаты" autocomplete="off" spellcheck="false" />
+            </div>
+            <button class="btn btn-ghost" onclick="joinRoom()">Войти</button>
+          </div>
+        </div>
+
+        <div class="log-line" id="log"></div>
+      </div>
+    </div>
+
+    <!-- ===== CALL ===== -->
+    <div class="call-view">
+      <div class="panel">
+        <div class="panel-label">Участники</div>
+        <div class="participants">
+
+          <div class="participant" id="youParticipant">
+            <div class="avatar you">
+              <div class="avatar-ring"></div>
+              <span id="yourInitial">ТЫ</span>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name" id="yourNickDisp">Ты</div>
+              <div class="participant-sub live" id="youSub">🎙 в эфире</div>
+            </div>
+            <div class="visualizer" id="myViz">
+              <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+              <div class="bar"></div><div class="bar"></div>
+            </div>
+          </div>
+
+          <div class="participant connected" id="friendParticipant" style="display:none">
+            <div class="avatar friend-av">
+              <div class="avatar-ring"></div>
+              <span id="friendInitial">👤</span>
+            </div>
+            <div class="participant-info">
+              <div class="participant-name" id="friendNickDisp">Друг</div>
+              <div class="participant-sub live">🔗 подключён</div>
+            </div>
+            <div class="visualizer">
+              <div class="bar fb"></div><div class="bar fb"></div><div class="bar fb"></div>
+              <div class="bar fb"></div><div class="bar fb"></div>
+            </div>
+          </div>
+
+          <div class="participant" id="waitingParticipant">
+            <div class="avatar waiting-av">···</div>
+            <div class="participant-info">
+              <div class="participant-name" style="color:var(--muted)">Ждём друга...</div>
+              <div class="participant-sub wait">скинь ссылку</div>
+            </div>
+            <div class="status-dot" id="waitDot"></div>
+          </div>
+
+        </div>
+
+        <div class="invite-box">
+          <div class="invite-label">Ссылка-приглашение</div>
+          <div class="invite-row">
+            <input class="invite-url" id="inviteUrl" readonly />
+            <button class="btn-copy" id="copyBtn" onclick="copyLink()">COPY</button>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="ctrl-btn" id="micBtn" onclick="toggleMic()" title="Микрофон">🎙</button>
+          <div class="ctrl-info">канал <span id="currentRoom"></span></div>
+          <button class="ctrl-btn ctrl-hangup" onclick="hangup()" title="Выйти">📵</button>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="chat-wrap">
+        <div class="chat-head">Чат</div>
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <div class="chat-input-row">
+          <input class="chat-in" id="chatIn" placeholder="Написать сообщение..." maxlength="300" autocomplete="off" spellcheck="false" />
+          <button class="send-btn" onclick="sendChat()">↑</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ICE = { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+]};
+
+let pc, localStream, ws, room, isMuted = false;
+let myNick = 'anon', friendNick = 'друг';
+
+document.getElementById('roomInput').addEventListener('keydown', e => { if (e.key==='Enter') joinRoom(); });
+document.getElementById('chatIn').addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
+
+function getNick() {
+  return document.getElementById('nickInput').value.trim() || 'anon';
+}
+
+function setLog(msg) {
+  document.getElementById('log').textContent = msg;
+}
+
+function randRoom() {
+  const w = ['echo','nova','orbit','delta','sigma','pulse','flux','relay','vortex','zenith','prism','quasar'];
+  return w[Math.floor(Math.random()*w.length)] + '-' + Math.floor(100+Math.random()*900);
+}
+
+function createRoom() {
+  document.getElementById('roomInput').value = randRoom();
+  joinRoom();
+}
+
+async function joinRoom() {
+  myNick = getNick();
+  const raw = document.getElementById('roomInput').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g,'');
+  room = raw.substring(0, 30);
+  if (!room) { setLog('⚠ введи название комнаты'); return; }
+
+  setLog('— запрашиваем микрофон —');
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch(e) {
+    setLog('❌ нет доступа к микрофону: ' + e.message);
+    return;
+  }
+
+  document.body.classList.add('in-call');
+  document.getElementById('currentRoom').textContent = room;
+  document.getElementById('yourNickDisp').textContent = myNick;
+  document.getElementById('yourInitial').textContent = myNick.slice(0,2).toUpperCase();
+
+  const url = location.href.split('#')[0] + '#' + encodeURIComponent(room);
+  document.getElementById('inviteUrl').value = url;
+
+  sysMsg('Ты вошёл в комнату #' + room + ' как @' + myNick);
+  initWS();
+}
+
+function initWS() {
+  try { ws = new WebSocket('wss://ws.vi-server.org/mirror/'); } catch(e) { return; }
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'join', room, nick: myNick }));
+    document.getElementById('waitDot').classList.add('live');
+  };
+
+  ws.onmessage = async (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (!msg || msg.room !== room) return;
+
+    if (msg.type === 'peer-joined') {
+      friendNick = msg.nick || 'друг';
+      updateFriendUI();
+      sysMsg('@' + friendNick + ' присоединился');
+      await doOffer();
+    }
+    if (msg.type === 'offer') {
+      friendNick = msg.nick || 'друг';
+      updateFriendUI();
+      await doAnswer(msg.sdp);
+    }
+    if (msg.type === 'answer') {
+      try { await pc.setRemoteDescription({ type:'answer', sdp: msg.sdp }); } catch {}
+    }
+    if (msg.type === 'ice') {
+      try { await pc.addIceCandidate(msg.candidate); } catch {}
+    }
+    if (msg.type === 'chat') {
+      addMsg(msg.nick || friendNick, msg.text, 'theirs');
+    }
+  };
+
+  ws.onerror = () => sysMsg('⚠ сигналинг недоступен');
+}
+
+function updateFriendUI() {
+  document.getElementById('friendNickDisp').textContent = friendNick;
+  document.getElementById('friendInitial').textContent = friendNick.slice(0,2).toUpperCase();
+}
+
+function mkPC() {
+  if (pc) pc.close();
+  pc = new RTCPeerConnection(ICE);
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+  pc.ontrack = (e) => {
+    document.getElementById('remoteAudio').srcObject = e.streams[0];
+    document.getElementById('friendParticipant').style.display = 'flex';
+    document.getElementById('waitingParticipant').style.display = 'none';
+    sysMsg('🟢 голосовая связь установлена');
+  };
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate && ws?.readyState === 1)
+      ws.send(JSON.stringify({ type:'ice', room, candidate: e.candidate }));
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (['disconnected','failed'].includes(pc.connectionState)) {
+      document.getElementById('friendParticipant').style.display = 'none';
+      document.getElementById('waitingParticipant').style.display = 'flex';
+      sysMsg('@' + friendNick + ' отключился');
+    }
+  };
+}
+
+async function doOffer() {
+  mkPC();
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  ws.send(JSON.stringify({ type:'offer', room, sdp: offer.sdp, nick: myNick }));
+}
+
+async function doAnswer(sdp) {
+  mkPC();
+  await pc.setRemoteDescription({ type:'offer', sdp });
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  ws.send(JSON.stringify({ type:'answer', room, sdp: answer.sdp, nick: myNick }));
+}
+
+function toggleMic() {
+  isMuted = !isMuted;
+  localStream?.getAudioTracks().forEach(t => t.enabled = !isMuted);
+  const btn = document.getElementById('micBtn');
+  btn.textContent = isMuted ? '🔇' : '🎙';
+  btn.classList.toggle('muted-on', isMuted);
+  document.getElementById('youSub').textContent = isMuted ? '🔇 заглушен' : '🎙 в эфире';
+  document.querySelectorAll('#myViz .bar').forEach(b => b.classList.toggle('muted', isMuted));
+}
+
+function hangup() {
+  pc?.close(); pc = null;
+  ws?.close(); ws = null;
+  localStream?.getTracks().forEach(t => t.stop()); localStream = null;
+  document.body.classList.remove('in-call');
+  document.getElementById('friendParticipant').style.display = 'none';
+  document.getElementById('waitingParticipant').style.display = 'flex';
+  document.getElementById('waitDot').classList.remove('live');
+  document.getElementById('micBtn').textContent = '🎙';
+  document.getElementById('micBtn').classList.remove('muted-on');
+  isMuted = false;
+  document.getElementById('chatMsgs').innerHTML = '';
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(document.getElementById('inviteUrl').value).then(() => {
+    const b = document.getElementById('copyBtn');
+    b.textContent = 'COPIED';
+    setTimeout(() => b.textContent = 'COPY', 2000);
+  });
+}
+
+function sendChat() {
+  const inp = document.getElementById('chatIn');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  addMsg(myNick, text, 'mine');
+  if (ws?.readyState === 1)
+    ws.send(JSON.stringify({ type:'chat', room, nick: myNick, text }));
+}
+
+function addMsg(nick, text, side) {
+  const box = document.getElementById('chatMsgs');
+  const el = document.createElement('div');
+  el.className = 'msg';
+  const initials = nick.slice(0,2).toUpperCase();
+  el.innerHTML = `<div class="msg-av ${side}">${initials}</div>
+    <div class="msg-body">
+      <div class="msg-nick ${side}">@${esc(nick)}</div>
+      <div class="msg-text">${esc(text)}</div>
+    </div>`;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sysMsg(text) {
+  const box = document.getElementById('chatMsgs');
+  const el = document.createElement('div');
+  el.className = 'msg';
+  el.innerHTML = `<div class="msg-av sys">—</div>
+    <div class="msg-body"><div class="msg-text sys">${esc(text)}</div></div>`;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.addEventListener('load', () => {
+  const hash = decodeURIComponent(location.hash.slice(1));
+  if (hash) document.getElementById('roomInput').value = hash;
+});
+</script>
+</body>
+</html>
