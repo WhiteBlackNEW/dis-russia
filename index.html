@@ -443,17 +443,32 @@
   - Чат: через PeerJS DataConnection
 */
 
-const PEER_CONFIG = {
-  config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun.stunprotocol.org:3478' },
-      { urls: 'stun:stun.voip.blackberry.com:3478' }
-    ]
-  },
-  debug: 0
-};
+// Try multiple servers in fallback order
+const PEER_SERVERS = [
+  { host: 'peerjs-server.fly.dev', port: 443, path: '/myapp', secure: true },
+  { host: '0.peerjs.com', port: 443, path: '/', secure: true }
+];
+
+let currentServerIndex = 0;
+
+function getPeerConfig() {
+  return {
+    ...PEER_SERVERS[currentServerIndex],
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:openrelay.metered.ca:80' },
+        { 
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
+      ]
+    },
+    debug: 1
+  };
+}
 
 let myPeer = null;
 let mediaConnections = {}; // { peerId: MediaConnection }
@@ -535,9 +550,9 @@ async function joinRoom() {
   tryAsHost(hostPeerId);
 }
 
-function tryAsHost(hostPeerId) {
+function tryAsHost(hostPeerId, serverRetry = false) {
   isHost = true;
-  myPeer = new Peer(hostPeerId, PEER_CONFIG);
+  myPeer = new Peer(hostPeerId, getPeerConfig());
 
   myPeer.on('open', id => {
     setLog('', 'ok');
@@ -560,14 +575,27 @@ function tryAsHost(hostPeerId) {
   });
 
   myPeer.on('error', err => {
+    console.error('Peer error:', err);
     if (err.type === 'unavailable-id') {
       // Host slot taken — we are the guest
       myPeer.destroy();
       joinAsGuest(hostPeerId);
-    } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
-      setLog('❌ Ошибка сервера. Попробуй ещё раз через пару секунд.', 'err');
+    } else if ((err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') && !serverRetry && currentServerIndex < PEER_SERVERS.length - 1) {
+      // Try next server
+      currentServerIndex++;
+      setLog('⚠ Пробуем другой сервер...', 'err');
+      myPeer.destroy();
+      setTimeout(() => tryAsHost(hostPeerId, true), 1000);
+    } else if (err.type === 'network') {
+      setLog('❌ Проблема с сетью. Проверь интернет.', 'err');
+    } else if (err.type === 'server-error') {
+      setLog('❌ Сервер недоступен. Попробуй через минуту.', 'err');
+    } else if (err.type === 'socket-error') {
+      setLog('❌ Ошибка подключения. Перезагрузи страницу.', 'err');
+    } else if (err.type === 'socket-closed') {
+      setLog('❌ Соединение разорвано. Попробуй снова.', 'err');
     } else {
-      setLog('❌ Ошибка: ' + err.message, 'err');
+      setLog('❌ Ошибка: ' + err.type + ' - ' + err.message, 'err');
     }
   });
 }
@@ -575,7 +603,7 @@ function tryAsHost(hostPeerId) {
 function joinAsGuest(hostPeerId, retryCount = 0) {
   isHost = false;
   const guestId = 'void-guest-' + Math.random().toString(36).slice(2,8);
-  myPeer = new Peer(guestId, PEER_CONFIG);
+  myPeer = new Peer(guestId, getPeerConfig());
 
   myPeer.on('open', id => {
     setLog('— звоним хосту —');
@@ -605,16 +633,29 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
   });
 
   myPeer.on('error', err => {
+    console.error('Peer error:', err);
     if (err.type === 'peer-unavailable' && retryCount < 3) {
       setLog(`⚠ Хост не найден, повтор ${retryCount + 1}/3...`, 'err');
       myPeer.destroy();
       setTimeout(() => joinAsGuest(hostPeerId, retryCount + 1), 1500);
     } else if (err.type === 'peer-unavailable') {
       setLog('❌ Хост недоступен. Попробуй создать новую комнату.', 'err');
-    } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
-      setLog('❌ Ошибка сервера. Попробуй ещё раз через пару секунд.', 'err');
+    } else if ((err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') && currentServerIndex < PEER_SERVERS.length - 1) {
+      // Try next server
+      currentServerIndex++;
+      setLog('⚠ Пробуем другой сервер...', 'err');
+      myPeer.destroy();
+      setTimeout(() => joinAsGuest(hostPeerId, 0), 1000);
+    } else if (err.type === 'network') {
+      setLog('❌ Проблема с сетью. Проверь интернет.', 'err');
+    } else if (err.type === 'server-error') {
+      setLog('❌ Сервер недоступен. Попробуй через минуту.', 'err');
+    } else if (err.type === 'socket-error') {
+      setLog('❌ Ошибка подключения. Перезагрузи страницу.', 'err');
+    } else if (err.type === 'socket-closed') {
+      setLog('❌ Соединение разорвано. Попробуй снова.', 'err');
     } else {
-      setLog('❌ ' + err.message, 'err');
+      setLog('❌ Ошибка: ' + err.type + ' - ' + err.message, 'err');
     }
   });
 }
