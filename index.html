@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Void — Voice Chat</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   :root {
     --bg: #0a0a0f;
     --surface: #111118;
     --surface2: #16161f;
-    --surface3: #1c1c28;
     --border: rgba(255,255,255,0.06);
     --border-bright: rgba(255,255,255,0.14);
     --accent: #7c6af7;
@@ -24,8 +24,7 @@
 
   body {
     font-family: 'Syne', sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    background: var(--bg); color: var(--text);
     min-height: 100vh;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; position: relative;
@@ -98,7 +97,7 @@
     padding: 11px 14px 11px 30px;
     color: var(--text); font-family: 'Space Mono', monospace;
     font-size: 13px; outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s; letter-spacing: 0.3px;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
   input[type="text"]::placeholder { color: var(--muted); }
   input[type="text"]:focus {
@@ -108,11 +107,9 @@
 
   .join-row { display: flex; gap: 8px; }
   .join-row .input-wrap { flex: 1; }
-  .join-row button { flex-shrink: 0; }
 
   .divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 16px 0;
+    display: flex; align-items: center; gap: 12px; margin: 16px 0;
     font-family: 'Space Mono', monospace; font-size: 10px;
     color: var(--muted); letter-spacing: 2px;
   }
@@ -121,14 +118,14 @@
   .btn {
     font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px;
     padding: 11px 18px; border-radius: 8px; border: none;
-    cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px;
-    white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 6px;
   }
   .btn:active { transform: scale(0.97); }
   .btn-accent {
     background: var(--accent); color: #fff;
-    box-shadow: 0 4px 16px rgba(124,106,247,0.28); width: 100%;
-    justify-content: center;
+    box-shadow: 0 4px 16px rgba(124,106,247,0.28);
+    width: 100%; justify-content: center;
   }
   .btn-accent:hover { background: #8d7ef8; box-shadow: 0 4px 20px rgba(124,106,247,0.42); }
   .btn-ghost {
@@ -141,6 +138,8 @@
     font-family: 'Space Mono', monospace; font-size: 11px;
     color: var(--muted); text-align: center; min-height: 18px; margin-top: 12px;
   }
+  .log-line.err { color: var(--accent3); }
+  .log-line.ok { color: var(--accent2); }
 
   /* ===== CALL VIEW ===== */
   .idle-view { display: block; }
@@ -148,7 +147,6 @@
   body.in-call .idle-view { display: none; }
   body.in-call .call-view { display: block; }
 
-  /* Participants */
   .participants { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
   .participant {
     display: flex; align-items: center; gap: 12px;
@@ -173,7 +171,7 @@
 
   .participant-info { flex: 1; min-width: 0; }
   .participant-name { font-weight: 600; font-size: 13px; line-height: 1; margin-bottom: 3px; }
-  .participant-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.3px; }
+  .participant-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
   .participant-sub.live { color: var(--accent2); }
   .participant-sub.wait { color: var(--muted2); }
 
@@ -188,7 +186,6 @@
   .bar.fb { background: var(--accent2); }
   @keyframes wave { 0%,100%{transform:scaleY(0.3);opacity:0.3} 50%{transform:scaleY(1);opacity:0.75} }
 
-  /* Invite */
   .invite-box {
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 10px; padding: 12px; margin-bottom: 16px;
@@ -205,17 +202,14 @@
     outline: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .btn-copy {
-    font-family: 'Space Mono', monospace; font-size: 11px;
-    padding: 7px 12px; background: rgba(124,106,247,0.1);
-    color: var(--accent); border: 1px solid rgba(124,106,247,0.2);
-    border-radius: 6px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    font-family: 'Space Mono', monospace; font-size: 11px; padding: 7px 12px;
+    background: rgba(124,106,247,0.1); color: var(--accent);
+    border: 1px solid rgba(124,106,247,0.2); border-radius: 6px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
   }
   .btn-copy:hover { background: rgba(124,106,247,0.22); }
 
-  /* Controls */
-  .controls {
-    display: flex; gap: 8px; align-items: center;
-  }
+  .controls { display: flex; gap: 8px; align-items: center; }
   .ctrl-btn {
     width: 40px; height: 40px; border-radius: 10px;
     border: 1px solid var(--border); background: var(--surface2);
@@ -229,8 +223,7 @@
   .ctrl-hangup:hover { background: rgba(247,106,138,0.28); border-color: rgba(247,106,138,0.5); }
   .ctrl-info {
     flex: 1; text-align: center;
-    font-family: 'Space Mono', monospace; font-size: 10px;
-    color: var(--muted); letter-spacing: 0.5px;
+    font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
   }
   .ctrl-info span { color: var(--accent2); }
 
@@ -238,13 +231,10 @@
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--muted2); flex-shrink: 0; transition: all 0.3s;
   }
-  .status-dot.live {
-    background: var(--accent2); box-shadow: 0 0 8px var(--accent2);
-    animation: blink 2s ease-in-out infinite;
-  }
+  .status-dot.live { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); animation: blink 2s ease-in-out infinite; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  /* ===== CHAT ===== */
+  /* Chat */
   .chat-wrap { border-top: 1px solid var(--border); }
   .chat-head {
     padding: 12px 24px 0;
@@ -260,7 +250,6 @@
     scroll-behavior: smooth;
   }
   .chat-msgs::-webkit-scrollbar { width: 3px; }
-  .chat-msgs::-webkit-scrollbar-track { background: transparent; }
   .chat-msgs::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
 
   .msg { display: flex; gap: 9px; align-items: flex-start; animation: fadeUp 0.2s ease; }
@@ -273,11 +262,8 @@
   .msg-av.mine { background: rgba(124,106,247,0.2); color: var(--accent); }
   .msg-av.theirs { background: rgba(79,200,168,0.15); color: var(--accent2); }
   .msg-av.sys { background: rgba(58,58,80,0.4); color: var(--muted); font-size: 11px; }
-
   .msg-body { flex: 1; min-width: 0; }
-  .msg-nick {
-    font-family: 'Space Mono', monospace; font-size: 10px; margin-bottom: 2px; letter-spacing: 0.3px;
-  }
+  .msg-nick { font-family: 'Space Mono', monospace; font-size: 10px; margin-bottom: 2px; }
   .msg-nick.mine { color: var(--accent); }
   .msg-nick.theirs { color: var(--accent2); }
   .msg-text { font-size: 13px; line-height: 1.5; color: var(--text); word-break: break-word; }
@@ -288,10 +274,8 @@
     border-top: 1px solid var(--border);
   }
   .chat-in {
-    flex: 1; background: var(--surface2);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 9px 13px; color: var(--text);
-    font-family: 'Syne', sans-serif; font-size: 13px;
+    flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 13px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 13px;
     outline: none; transition: border-color 0.2s;
   }
   .chat-in:focus { border-color: rgba(124,106,247,0.4); }
@@ -310,7 +294,7 @@
 </style>
 </head>
 <body>
-<audio id="remoteAudio" autoplay></audio>
+<audio id="remoteAudio" autoplay playsinline></audio>
 
 <div class="app">
   <div class="wordmark">
@@ -320,7 +304,7 @@
 
   <div class="card">
 
-    <!-- ===== IDLE ===== -->
+    <!-- IDLE -->
     <div class="idle-view">
       <div class="panel">
         <div class="panel-label">Профиль</div>
@@ -358,13 +342,13 @@
       </div>
     </div>
 
-    <!-- ===== CALL ===== -->
+    <!-- CALL -->
     <div class="call-view">
       <div class="panel">
         <div class="panel-label">Участники</div>
         <div class="participants">
 
-          <div class="participant" id="youParticipant">
+          <div class="participant">
             <div class="avatar you">
               <div class="avatar-ring"></div>
               <span id="yourInitial">ТЫ</span>
@@ -420,7 +404,6 @@
         </div>
       </div>
 
-      <!-- Chat -->
       <div class="chat-wrap">
         <div class="chat-head">Чат</div>
         <div class="chat-msgs" id="chatMsgs"></div>
@@ -435,24 +418,73 @@
 </div>
 
 <script>
-const ICE = { iceServers: [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-]};
+/*
+  Архитектура:
+  - Каждый пользователь регистрируется в PeerJS как "room__nick__randomid"
+  - Хост (создатель) регистрируется как "void-HOST-roomname"
+  - Гость ищет хоста по этому ID и звонит ему
+  - Голос: через PeerJS MediaConnection
+  - Чат: через PeerJS DataConnection
+*/
 
-let pc, localStream, ws, room, isMuted = false;
-let myNick = 'anon', friendNick = 'друг';
+const PEER_CONFIG = {
+  host: '0.peerjs.com',
+  port: 443,
+  path: '/',
+  secure: true,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ]
+  }
+};
 
-document.getElementById('roomInput').addEventListener('keydown', e => { if (e.key==='Enter') joinRoom(); });
-document.getElementById('chatIn').addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
+let myPeer = null;
+let mediaConn = null;
+let dataConn = null;
+let localStream = null;
+let isMuted = false;
+let myNick = 'anon';
+let friendNick = 'друг';
+let room = '';
+let isHost = false;
 
-function getNick() {
-  return document.getElementById('nickInput').value.trim() || 'anon';
+// UI helpers
+const $ = id => document.getElementById(id);
+function setLog(msg, cls='') {
+  const el = $('log');
+  el.textContent = msg;
+  el.className = 'log-line ' + cls;
+}
+function sysMsg(text) {
+  addMsg(null, text, 'sys');
+}
+function addMsg(nick, text, side) {
+  const box = $('chatMsgs');
+  const el = document.createElement('div');
+  el.className = 'msg';
+  if (side === 'sys') {
+    el.innerHTML = `<div class="msg-av sys">—</div>
+      <div class="msg-body"><div class="msg-text sys">${esc(text)}</div></div>`;
+  } else {
+    const initials = (nick||'?').slice(0,2).toUpperCase();
+    el.innerHTML = `<div class="msg-av ${side}">${initials}</div>
+      <div class="msg-body">
+        <div class="msg-nick ${side}">@${esc(nick)}</div>
+        <div class="msg-text">${esc(text)}</div>
+      </div>`;
+  }
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function setLog(msg) {
-  document.getElementById('log').textContent = msg;
-}
+// Enter keys
+$('roomInput').addEventListener('keydown', e => { if (e.key==='Enter') joinRoom(); });
+$('chatIn').addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
 
 function randRoom() {
   const w = ['echo','nova','orbit','delta','sigma','pulse','flux','relay','vortex','zenith','prism','quasar'];
@@ -460,193 +492,225 @@ function randRoom() {
 }
 
 function createRoom() {
-  document.getElementById('roomInput').value = randRoom();
+  $('roomInput').value = randRoom();
   joinRoom();
 }
 
 async function joinRoom() {
-  myNick = getNick();
-  const raw = document.getElementById('roomInput').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g,'');
-  room = raw.substring(0, 30);
-  if (!room) { setLog('⚠ введи название комнаты'); return; }
+  myNick = $('nickInput').value.trim() || 'anon';
+  const raw = $('roomInput').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g,'');
+  room = raw.substring(0, 24);
+  if (!room) { setLog('⚠ введи название комнаты', 'err'); return; }
 
   setLog('— запрашиваем микрофон —');
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch(e) {
-    setLog('❌ нет доступа к микрофону: ' + e.message);
+    setLog('❌ нет доступа к микрофону', 'err');
     return;
   }
 
+  setLog('— подключаемся к серверу —');
+
+  // Host peer ID = "void--ROOM" (stable, known ID)
+  // We try to claim it first; if taken, we are the guest
+  const hostPeerId = 'void--' + room;
+
+  // Try to connect as host
+  tryAsHost(hostPeerId);
+}
+
+function tryAsHost(hostPeerId) {
+  isHost = true;
+  myPeer = new Peer(hostPeerId, PEER_CONFIG);
+
+  myPeer.on('open', id => {
+    // We got the host ID — we are the host
+    setLog('', 'ok');
+    enterCallUI();
+    sysMsg('Ты создал комнату #' + room + ' как @' + myNick);
+
+    // Wait for incoming calls
+    myPeer.on('call', call => {
+      call.answer(localStream);
+      mediaConn = call;
+      handleMediaConn(call);
+    });
+
+    myPeer.on('connection', conn => {
+      dataConn = conn;
+      setupDataConn(conn);
+    });
+  });
+
+  myPeer.on('error', err => {
+    if (err.type === 'unavailable-id') {
+      // Host slot taken — we are the guest
+      myPeer.destroy();
+      joinAsGuest(hostPeerId);
+    } else {
+      setLog('❌ Ошибка: ' + err.message, 'err');
+    }
+  });
+}
+
+function joinAsGuest(hostPeerId) {
+  isHost = false;
+  // Guest gets random peer ID
+  const guestId = 'void-guest-' + Math.random().toString(36).slice(2,8);
+  myPeer = new Peer(guestId, PEER_CONFIG);
+
+  myPeer.on('open', id => {
+    setLog('— звоним хосту —');
+    enterCallUI();
+    sysMsg('Ты вошёл в комнату #' + room + ' как @' + myNick);
+
+    // Call host for voice
+    const call = myPeer.call(hostPeerId, localStream, {
+      metadata: { nick: myNick }
+    });
+    mediaConn = call;
+    handleMediaConn(call);
+
+    // Data channel for chat
+    const conn = myPeer.connect(hostPeerId, {
+      metadata: { nick: myNick },
+      reliable: true
+    });
+    dataConn = conn;
+    setupDataConn(conn);
+
+    conn.on('open', () => {
+      conn.send({ type: 'hello', nick: myNick });
+    });
+  });
+
+  myPeer.on('error', err => {
+    if (err.type === 'peer-unavailable') {
+      setLog('⚠ Хост не найден. Создаём новую комнату...', 'err');
+      myPeer.destroy();
+      // Retry as host with slight delay
+      setTimeout(() => tryAsHost('void--' + room), 800);
+    } else {
+      setLog('❌ ' + err.message, 'err');
+    }
+  });
+}
+
+function handleMediaConn(call) {
+  call.on('stream', remoteStream => {
+    $('remoteAudio').srcObject = remoteStream;
+    showFriend(call.metadata?.nick || call.peer);
+    sysMsg('🔗 голосовая связь установлена');
+  });
+  call.on('close', () => {
+    friendDisconnected();
+  });
+  call.on('error', e => {
+    sysMsg('⚠ ошибка соединения: ' + e.message);
+  });
+}
+
+function setupDataConn(conn) {
+  conn.on('open', () => {
+    // host side: greet back
+    if (isHost) {
+      conn.send({ type: 'hello', nick: myNick });
+    }
+  });
+  conn.on('data', data => {
+    if (data.type === 'hello') {
+      friendNick = data.nick || 'друг';
+      showFriend(friendNick);
+    }
+    if (data.type === 'chat') {
+      addMsg(data.nick || friendNick, data.text, 'theirs');
+    }
+  });
+  conn.on('close', () => friendDisconnected());
+}
+
+function showFriend(nick) {
+  if (nick && nick !== friendNick) {
+    friendNick = nick;
+  }
+  $('friendNickDisp').textContent = friendNick;
+  $('friendInitial').textContent = friendNick.slice(0,2).toUpperCase();
+  $('friendParticipant').style.display = 'flex';
+  $('waitingParticipant').style.display = 'none';
+  $('waitDot').classList.remove('live');
+}
+
+function friendDisconnected() {
+  $('friendParticipant').style.display = 'none';
+  $('waitingParticipant').style.display = 'flex';
+  $('waitDot').classList.add('live');
+  $('remoteAudio').srcObject = null;
+  sysMsg('@' + friendNick + ' отключился');
+}
+
+function enterCallUI() {
   document.body.classList.add('in-call');
-  document.getElementById('currentRoom').textContent = room;
-  document.getElementById('yourNickDisp').textContent = myNick;
-  document.getElementById('yourInitial').textContent = myNick.slice(0,2).toUpperCase();
+  $('currentRoom').textContent = room;
+  $('yourNickDisp').textContent = myNick;
+  $('yourInitial').textContent = myNick.slice(0,2).toUpperCase();
+  $('waitDot').classList.add('live');
 
   const url = location.href.split('#')[0] + '#' + encodeURIComponent(room);
-  document.getElementById('inviteUrl').value = url;
-
-  sysMsg('Ты вошёл в комнату #' + room + ' как @' + myNick);
-  initWS();
-}
-
-function initWS() {
-  try { ws = new WebSocket('wss://ws.vi-server.org/mirror/'); } catch(e) { return; }
-
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'join', room, nick: myNick }));
-    document.getElementById('waitDot').classList.add('live');
-  };
-
-  ws.onmessage = async (ev) => {
-    let msg;
-    try { msg = JSON.parse(ev.data); } catch { return; }
-    if (!msg || msg.room !== room) return;
-
-    if (msg.type === 'peer-joined') {
-      friendNick = msg.nick || 'друг';
-      updateFriendUI();
-      sysMsg('@' + friendNick + ' присоединился');
-      await doOffer();
-    }
-    if (msg.type === 'offer') {
-      friendNick = msg.nick || 'друг';
-      updateFriendUI();
-      await doAnswer(msg.sdp);
-    }
-    if (msg.type === 'answer') {
-      try { await pc.setRemoteDescription({ type:'answer', sdp: msg.sdp }); } catch {}
-    }
-    if (msg.type === 'ice') {
-      try { await pc.addIceCandidate(msg.candidate); } catch {}
-    }
-    if (msg.type === 'chat') {
-      addMsg(msg.nick || friendNick, msg.text, 'theirs');
-    }
-  };
-
-  ws.onerror = () => sysMsg('⚠ сигналинг недоступен');
-}
-
-function updateFriendUI() {
-  document.getElementById('friendNickDisp').textContent = friendNick;
-  document.getElementById('friendInitial').textContent = friendNick.slice(0,2).toUpperCase();
-}
-
-function mkPC() {
-  if (pc) pc.close();
-  pc = new RTCPeerConnection(ICE);
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
-  pc.ontrack = (e) => {
-    document.getElementById('remoteAudio').srcObject = e.streams[0];
-    document.getElementById('friendParticipant').style.display = 'flex';
-    document.getElementById('waitingParticipant').style.display = 'none';
-    sysMsg('🟢 голосовая связь установлена');
-  };
-
-  pc.onicecandidate = (e) => {
-    if (e.candidate && ws?.readyState === 1)
-      ws.send(JSON.stringify({ type:'ice', room, candidate: e.candidate }));
-  };
-
-  pc.onconnectionstatechange = () => {
-    if (['disconnected','failed'].includes(pc.connectionState)) {
-      document.getElementById('friendParticipant').style.display = 'none';
-      document.getElementById('waitingParticipant').style.display = 'flex';
-      sysMsg('@' + friendNick + ' отключился');
-    }
-  };
-}
-
-async function doOffer() {
-  mkPC();
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  ws.send(JSON.stringify({ type:'offer', room, sdp: offer.sdp, nick: myNick }));
-}
-
-async function doAnswer(sdp) {
-  mkPC();
-  await pc.setRemoteDescription({ type:'offer', sdp });
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  ws.send(JSON.stringify({ type:'answer', room, sdp: answer.sdp, nick: myNick }));
+  $('inviteUrl').value = url;
 }
 
 function toggleMic() {
   isMuted = !isMuted;
   localStream?.getAudioTracks().forEach(t => t.enabled = !isMuted);
-  const btn = document.getElementById('micBtn');
+  const btn = $('micBtn');
   btn.textContent = isMuted ? '🔇' : '🎙';
   btn.classList.toggle('muted-on', isMuted);
-  document.getElementById('youSub').textContent = isMuted ? '🔇 заглушен' : '🎙 в эфире';
+  $('youSub').textContent = isMuted ? '🔇 заглушен' : '🎙 в эфире';
   document.querySelectorAll('#myViz .bar').forEach(b => b.classList.toggle('muted', isMuted));
 }
 
 function hangup() {
-  pc?.close(); pc = null;
-  ws?.close(); ws = null;
-  localStream?.getTracks().forEach(t => t.stop()); localStream = null;
-  document.body.classList.remove('in-call');
-  document.getElementById('friendParticipant').style.display = 'none';
-  document.getElementById('waitingParticipant').style.display = 'flex';
-  document.getElementById('waitDot').classList.remove('live');
-  document.getElementById('micBtn').textContent = '🎙';
-  document.getElementById('micBtn').classList.remove('muted-on');
+  mediaConn?.close();
+  dataConn?.close();
+  myPeer?.destroy();
+  localStream?.getTracks().forEach(t => t.stop());
+  mediaConn = dataConn = myPeer = localStream = null;
   isMuted = false;
-  document.getElementById('chatMsgs').innerHTML = '';
+
+  document.body.classList.remove('in-call');
+  $('friendParticipant').style.display = 'none';
+  $('waitingParticipant').style.display = 'flex';
+  $('waitDot').classList.remove('live');
+  $('micBtn').textContent = '🎙';
+  $('micBtn').classList.remove('muted-on');
+  $('chatMsgs').innerHTML = '';
+  $('remoteAudio').srcObject = null;
 }
 
 function copyLink() {
-  navigator.clipboard.writeText(document.getElementById('inviteUrl').value).then(() => {
-    const b = document.getElementById('copyBtn');
+  navigator.clipboard.writeText($('inviteUrl').value).then(() => {
+    const b = $('copyBtn');
     b.textContent = 'COPIED';
     setTimeout(() => b.textContent = 'COPY', 2000);
   });
 }
 
 function sendChat() {
-  const inp = document.getElementById('chatIn');
+  const inp = $('chatIn');
   const text = inp.value.trim();
   if (!text) return;
   inp.value = '';
   addMsg(myNick, text, 'mine');
-  if (ws?.readyState === 1)
-    ws.send(JSON.stringify({ type:'chat', room, nick: myNick, text }));
+  if (dataConn?.open) {
+    dataConn.send({ type: 'chat', nick: myNick, text });
+  }
 }
 
-function addMsg(nick, text, side) {
-  const box = document.getElementById('chatMsgs');
-  const el = document.createElement('div');
-  el.className = 'msg';
-  const initials = nick.slice(0,2).toUpperCase();
-  el.innerHTML = `<div class="msg-av ${side}">${initials}</div>
-    <div class="msg-body">
-      <div class="msg-nick ${side}">@${esc(nick)}</div>
-      <div class="msg-text">${esc(text)}</div>
-    </div>`;
-  box.appendChild(el);
-  box.scrollTop = box.scrollHeight;
-}
-
-function sysMsg(text) {
-  const box = document.getElementById('chatMsgs');
-  const el = document.createElement('div');
-  el.className = 'msg';
-  el.innerHTML = `<div class="msg-av sys">—</div>
-    <div class="msg-body"><div class="msg-text sys">${esc(text)}</div></div>`;
-  box.appendChild(el);
-  box.scrollTop = box.scrollHeight;
-}
-
-function esc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
+// Auto-join from URL hash
 window.addEventListener('load', () => {
   const hash = decodeURIComponent(location.hash.slice(1));
-  if (hash) document.getElementById('roomInput').value = hash;
+  if (hash) $('roomInput').value = hash;
 });
 </script>
 </body>
