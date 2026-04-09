@@ -23,11 +23,15 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Syne', sans-serif;
-    background: var(--bg); color: var(--text);
+    font-family: 'Syne', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); 
+    color: var(--text);
     min-height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; position: relative;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    overflow: hidden; 
+    position: relative;
   }
   body::before {
     content: ''; position: fixed; inset: 0;
@@ -143,9 +147,9 @@
 
   /* ===== CALL VIEW ===== */
   .idle-view { display: block; }
-  .call-view { display: none; }
-  body.in-call .idle-view { display: none; }
-  body.in-call .call-view { display: block; }
+  .call-view { display: none !important; }
+  body.in-call .idle-view { display: none !important; }
+  body.in-call .call-view { display: block !important; }
 
   .participants { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
   .participant {
