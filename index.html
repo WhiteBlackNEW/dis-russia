@@ -80,6 +80,15 @@
     margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
   }
   .panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  
+  .expand-btn {
+    background: transparent; border: none; color: var(--muted2);
+    font-size: 14px; cursor: pointer; padding: 2px 6px;
+    border-radius: 4px; transition: all 0.15s; margin-left: auto;
+    order: 2;
+  }
+  .expand-btn:hover { background: rgba(255,255,255,0.03); color: var(--muted); }
+  .expand-btn:active { transform: scale(0.9); }
 
   .field { margin-bottom: 14px; }
   .field-label {
@@ -152,6 +161,9 @@
   body.in-call .call-view { display: block !important; }
 
   .participants { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .participants.expanded { max-height: 400px; overflow-y: auto; }
+  .participants.expanded::-webkit-scrollbar { width: 3px; }
+  .participants.expanded::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
   .participant {
     display: flex; align-items: center; gap: 12px;
     padding: 10px 12px; background: var(--surface2);
@@ -237,6 +249,16 @@
   }
   .status-dot.live { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); animation: blink 2s ease-in-out infinite; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .kick-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: rgba(247,106,138,0.08); border: 1px solid rgba(247,106,138,0.2);
+    color: var(--accent3); font-size: 14px; cursor: pointer;
+    transition: all 0.15s; flex-shrink: 0; display: flex;
+    align-items: center; justify-content: center; padding: 0;
+  }
+  .kick-btn:hover { background: rgba(247,106,138,0.2); border-color: rgba(247,106,138,0.4); }
+  .kick-btn:active { transform: scale(0.92); }
 
   /* Chat */
   .chat-wrap { border-top: 1px solid var(--border); }
@@ -349,7 +371,10 @@
     <!-- CALL -->
     <div class="call-view">
       <div class="panel">
-        <div class="panel-label">Участники</div>
+        <div class="panel-label">
+          Участники
+          <button class="expand-btn" id="expandBtn" onclick="toggleExpand()" title="Показать всех">⋯</button>
+        </div>
         <div class="participants">
 
           <div class="participant">
@@ -380,6 +405,7 @@
               <div class="bar fb"></div><div class="bar fb"></div><div class="bar fb"></div>
               <div class="bar fb"></div><div class="bar fb"></div>
             </div>
+            <button class="kick-btn" id="kickBtn" onclick="kickUser()" title="Кикнуть" style="display:none">✕</button>
           </div>
 
           <div class="participant" id="waitingParticipant">
@@ -432,16 +458,14 @@
 */
 
 const PEER_CONFIG = {
-  host: '0.peerjs.com',
-  port: 443,
-  path: '/',
-  secure: true,
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' }
     ]
-  }
+  },
+  debug: 0
 };
 
 let myPeer = null;
@@ -552,6 +576,8 @@ function tryAsHost(hostPeerId) {
       // Host slot taken — we are the guest
       myPeer.destroy();
       joinAsGuest(hostPeerId);
+    } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+      setLog('❌ Ошибка сервера. Попробуй ещё раз через пару секунд.', 'err');
     } else {
       setLog('❌ Ошибка: ' + err.message, 'err');
     }
@@ -600,6 +626,8 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
       setTimeout(() => joinAsGuest(hostPeerId, retryCount + 1), 1500);
     } else if (err.type === 'peer-unavailable') {
       setLog('❌ Хост недоступен. Попробуй создать новую комнату.', 'err');
+    } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+      setLog('❌ Ошибка сервера. Попробуй ещё раз через пару секунд.', 'err');
     } else {
       setLog('❌ ' + err.message, 'err');
     }
@@ -635,6 +663,10 @@ function setupDataConn(conn) {
     if (data.type === 'chat') {
       addMsg(data.nick || friendNick, data.text, 'theirs');
     }
+    if (data.type === 'kick') {
+      sysMsg('❌ Тебя кикнул хост');
+      setTimeout(() => hangup(), 1000);
+    }
   });
   conn.on('close', () => friendDisconnected());
 }
@@ -648,6 +680,29 @@ function showFriend(nick) {
   $('friendParticipant').style.display = 'flex';
   $('waitingParticipant').style.display = 'none';
   $('waitDot').classList.remove('live');
+  
+  // Show kick button only for host
+  if (isHost) {
+    $('kickBtn').style.display = 'flex';
+  }
+}
+
+function kickUser() {
+  if (!isHost) return;
+  
+  if (confirm('Кикнуть @' + friendNick + ' из комнаты?')) {
+    // Send kick message
+    if (dataConn?.open) {
+      dataConn.send({ type: 'kick' });
+    }
+    
+    // Close connections
+    mediaConn?.close();
+    dataConn?.close();
+    
+    friendDisconnected();
+    sysMsg('Ты кикнул @' + friendNick);
+  }
 }
 
 function friendDisconnected() {
@@ -714,6 +769,13 @@ function sendChat() {
   if (dataConn?.open) {
     dataConn.send({ type: 'chat', nick: myNick, text });
   }
+}
+
+function toggleExpand() {
+  const list = document.querySelector('.participants');
+  const btn = $('expandBtn');
+  list.classList.toggle('expanded');
+  btn.textContent = list.classList.contains('expanded') ? '−' : '⋯';
 }
 
 // Auto-join from URL hash
