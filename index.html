@@ -392,21 +392,7 @@
             </div>
           </div>
 
-          <div class="participant connected" id="friendParticipant" style="display:none">
-            <div class="avatar friend-av">
-              <div class="avatar-ring"></div>
-              <span id="friendInitial">👤</span>
-            </div>
-            <div class="participant-info">
-              <div class="participant-name" id="friendNickDisp">Друг</div>
-              <div class="participant-sub live">🔗 подключён</div>
-            </div>
-            <div class="visualizer">
-              <div class="bar fb"></div><div class="bar fb"></div><div class="bar fb"></div>
-              <div class="bar fb"></div><div class="bar fb"></div>
-            </div>
-            <button class="kick-btn" id="kickBtn" onclick="kickUser()" title="Кикнуть" style="display:none">✕</button>
-          </div>
+          <!-- Dynamic participants will be inserted here -->
 
           <div class="participant" id="waitingParticipant">
             <div class="avatar waiting-av">···</div>
@@ -462,19 +448,20 @@ const PEER_CONFIG = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
+      { urls: 'stun:stun.stunprotocol.org:3478' },
+      { urls: 'stun:stun.voip.blackberry.com:3478' }
     ]
   },
   debug: 0
 };
 
 let myPeer = null;
-let mediaConn = null;
-let dataConn = null;
+let mediaConnections = {}; // { peerId: MediaConnection }
+let dataConnections = {}; // { peerId: DataConnection }
+let participants = {}; // { peerId: { nick, stream } }
 let localStream = null;
 let isMuted = false;
 let myNick = 'anon';
-let friendNick = 'друг';
 let room = '';
 let isHost = false;
 
@@ -553,21 +540,22 @@ function tryAsHost(hostPeerId) {
   myPeer = new Peer(hostPeerId, PEER_CONFIG);
 
   myPeer.on('open', id => {
-    // We got the host ID — we are the host
     setLog('', 'ok');
     enterCallUI();
     sysMsg('Ты создал комнату #' + room + ' как @' + myNick);
 
-    // Wait for incoming calls
+    // Wait for incoming calls (multiple guests)
     myPeer.on('call', call => {
+      const peerId = call.peer;
       call.answer(localStream);
-      mediaConn = call;
-      handleMediaConn(call);
+      mediaConnections[peerId] = call;
+      handleMediaConn(call, peerId);
     });
 
     myPeer.on('connection', conn => {
-      dataConn = conn;
-      setupDataConn(conn);
+      const peerId = conn.peer;
+      dataConnections[peerId] = conn;
+      setupDataConn(conn, peerId);
     });
   });
 
@@ -586,7 +574,6 @@ function tryAsHost(hostPeerId) {
 
 function joinAsGuest(hostPeerId, retryCount = 0) {
   isHost = false;
-  // Guest gets random peer ID
   const guestId = 'void-guest-' + Math.random().toString(36).slice(2,8);
   myPeer = new Peer(guestId, PEER_CONFIG);
 
@@ -595,22 +582,21 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
     enterCallUI();
     sysMsg('Ты вошёл в комнату #' + room + ' как @' + myNick);
 
-    // Small delay to ensure host is ready
     setTimeout(() => {
       // Call host for voice
       const call = myPeer.call(hostPeerId, localStream, {
         metadata: { nick: myNick }
       });
-      mediaConn = call;
-      handleMediaConn(call);
+      mediaConnections[hostPeerId] = call;
+      handleMediaConn(call, hostPeerId);
 
       // Data channel for chat
       const conn = myPeer.connect(hostPeerId, {
         metadata: { nick: myNick },
         reliable: true
       });
-      dataConn = conn;
-      setupDataConn(conn);
+      dataConnections[hostPeerId] = conn;
+      setupDataConn(conn, hostPeerId);
 
       conn.on('open', () => {
         conn.send({ type: 'hello', nick: myNick });
@@ -622,7 +608,6 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
     if (err.type === 'peer-unavailable' && retryCount < 3) {
       setLog(`⚠ Хост не найден, повтор ${retryCount + 1}/3...`, 'err');
       myPeer.destroy();
-      // Retry as guest after delay
       setTimeout(() => joinAsGuest(hostPeerId, retryCount + 1), 1500);
     } else if (err.type === 'peer-unavailable') {
       setLog('❌ Хост недоступен. Попробуй создать новую комнату.', 'err');
@@ -634,83 +619,136 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
   });
 }
 
-function handleMediaConn(call) {
+function handleMediaConn(call, peerId) {
   call.on('stream', remoteStream => {
-    $('remoteAudio').srcObject = remoteStream;
-    showFriend(call.metadata?.nick || call.peer);
-    sysMsg('🔗 голосовая связь установлена');
+    const nick = call.metadata?.nick || peerId.slice(0, 8);
+    participants[peerId] = { nick, stream: remoteStream };
+    
+    // Create audio element for this participant
+    let audio = document.getElementById('audio-' + peerId);
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.id = 'audio-' + peerId;
+      audio.autoplay = true;
+      audio.playsInline = true;
+      document.body.appendChild(audio);
+    }
+    audio.srcObject = remoteStream;
+    
+    addParticipantToUI(peerId, nick);
+    sysMsg('🔗 @' + nick + ' подключился');
   });
+  
   call.on('close', () => {
-    friendDisconnected();
+    removeParticipant(peerId);
   });
+  
   call.on('error', e => {
     sysMsg('⚠ ошибка соединения: ' + e.message);
   });
 }
 
-function setupDataConn(conn) {
+function setupDataConn(conn, peerId) {
   conn.on('open', () => {
-    // host side: greet back
     if (isHost) {
       conn.send({ type: 'hello', nick: myNick });
     }
   });
+  
   conn.on('data', data => {
     if (data.type === 'hello') {
-      friendNick = data.nick || 'друг';
-      showFriend(friendNick);
+      const nick = data.nick || 'друг';
+      if (participants[peerId]) {
+        participants[peerId].nick = nick;
+        updateParticipantUI(peerId, nick);
+      }
     }
     if (data.type === 'chat') {
-      addMsg(data.nick || friendNick, data.text, 'theirs');
+      addMsg(data.nick || participants[peerId]?.nick || 'друг', data.text, 'theirs');
     }
     if (data.type === 'kick') {
       sysMsg('❌ Тебя кикнул хост');
       setTimeout(() => hangup(), 1000);
     }
   });
-  conn.on('close', () => friendDisconnected());
+  
+  conn.on('close', () => {
+    removeParticipant(peerId);
+  });
+}
+
+function addParticipantToUI(peerId, nick) {
+  // Remove waiting message if this is first participant
+  if (Object.keys(participants).length === 1) {
+    $('waitingParticipant').style.display = 'none';
+  }
+  
+  // Check if already exists
+  if (document.getElementById('participant-' + peerId)) {
+    updateParticipantUI(peerId, nick);
+    return;
+  }
+  
+  const container = document.querySelector('.participants');
+  const el = document.createElement('div');
+  el.className = 'participant connected';
+  el.id = 'participant-' + peerId;
+  el.innerHTML = `
+    <div class="avatar friend-av">
+      <div class="avatar-ring"></div>
+      <span class="participant-initial">${nick.slice(0,2).toUpperCase()}</span>
+    </div>
+    <div class="participant-info">
+      <div class="participant-name participant-nick">${esc(nick)}</div>
+      <div class="participant-sub live">🔗 подключён</div>
+    </div>
+    <div class="visualizer">
+      <div class="bar fb"></div><div class="bar fb"></div><div class="bar fb"></div>
+      <div class="bar fb"></div><div class="bar fb"></div>
+    </div>
+    ${isHost ? '<button class="kick-btn" onclick="kickUser(\'' + peerId + '\')" title="Кикнуть">✕</button>' : ''}
+  `;
+  
+  // Insert before waiting participant
+  container.insertBefore(el, $('waitingParticipant'));
+}
+
+function updateParticipantUI(peerId, nick) {
+  const el = document.getElementById('participant-' + peerId);
+  if (!el) return;
+  
+  el.querySelector('.participant-initial').textContent = nick.slice(0,2).toUpperCase();
+  el.querySelector('.participant-nick').textContent = nick;
+}
+
+function removeParticipant(peerId) {
+  const el = document.getElementById('participant-' + peerId);
+  if (el) el.remove();
+  
+  const audio = document.getElementById('audio-' + peerId);
+  if (audio) audio.remove();
+  
+  const nick = participants[peerId]?.nick || 'пользователь';
+  delete participants[peerId];
+  delete mediaConnections[peerId];
+  delete dataConnections[peerId];
+  
+  sysMsg('@' + nick + ' отключился');
+  
+  // Show waiting message if no participants left
+  if (Object.keys(participants).length === 0) {
+    $('waitingParticipant').style.display = 'flex';
+  }
 }
 
 function showFriend(nick) {
-  if (nick && nick !== friendNick) {
-    friendNick = nick;
-  }
-  $('friendNickDisp').textContent = friendNick;
-  $('friendInitial').textContent = friendNick.slice(0,2).toUpperCase();
-  $('friendParticipant').style.display = 'flex';
-  $('waitingParticipant').style.display = 'none';
-  $('waitDot').classList.remove('live');
-  
-  // Show kick button only for host
-  if (isHost) {
-    $('kickBtn').style.display = 'flex';
-  }
-}
-
-function kickUser() {
-  if (!isHost) return;
-  
-  if (confirm('Кикнуть @' + friendNick + ' из комнаты?')) {
-    // Send kick message
-    if (dataConn?.open) {
-      dataConn.send({ type: 'kick' });
-    }
-    
-    // Close connections
-    mediaConn?.close();
-    dataConn?.close();
-    
-    friendDisconnected();
-    sysMsg('Ты кикнул @' + friendNick);
-  }
+  // Legacy function - kept for compatibility
+  addParticipantToUI('legacy', nick);
 }
 
 function friendDisconnected() {
-  $('friendParticipant').style.display = 'none';
-  $('waitingParticipant').style.display = 'flex';
-  $('waitDot').classList.add('live');
-  $('remoteAudio').srcObject = null;
-  sysMsg('@' + friendNick + ' отключился');
+  // Legacy function - kept for compatibility
+  removeParticipant('legacy');
 }
 
 function enterCallUI() {
@@ -735,21 +773,55 @@ function toggleMic() {
 }
 
 function hangup() {
-  mediaConn?.close();
-  dataConn?.close();
+  // Close all connections
+  Object.values(mediaConnections).forEach(conn => conn?.close());
+  Object.values(dataConnections).forEach(conn => conn?.close());
+  
+  // Remove all audio elements
+  Object.keys(participants).forEach(peerId => {
+    const audio = document.getElementById('audio-' + peerId);
+    if (audio) audio.remove();
+  });
+  
   myPeer?.destroy();
   localStream?.getTracks().forEach(t => t.stop());
-  mediaConn = dataConn = myPeer = localStream = null;
+  
+  mediaConnections = {};
+  dataConnections = {};
+  participants = {};
+  myPeer = localStream = null;
   isMuted = false;
 
   document.body.classList.remove('in-call');
-  $('friendParticipant').style.display = 'none';
+  
+  // Remove all dynamic participants
+  document.querySelectorAll('.participant[id^="participant-"]').forEach(el => el.remove());
+  
   $('waitingParticipant').style.display = 'flex';
   $('waitDot').classList.remove('live');
   $('micBtn').textContent = '🎙';
   $('micBtn').classList.remove('muted-on');
   $('chatMsgs').innerHTML = '';
   $('remoteAudio').srcObject = null;
+}
+
+function kickUser(peerId) {
+  if (!isHost) return;
+  
+  const nick = participants[peerId]?.nick || 'пользователь';
+  
+  if (confirm('Кикнуть @' + nick + ' из комнаты?')) {
+    const conn = dataConnections[peerId];
+    if (conn?.open) {
+      conn.send({ type: 'kick' });
+    }
+    
+    mediaConnections[peerId]?.close();
+    dataConnections[peerId]?.close();
+    
+    removeParticipant(peerId);
+    sysMsg('Ты кикнул @' + nick);
+  }
 }
 
 function copyLink() {
@@ -766,9 +838,13 @@ function sendChat() {
   if (!text) return;
   inp.value = '';
   addMsg(myNick, text, 'mine');
-  if (dataConn?.open) {
-    dataConn.send({ type: 'chat', nick: myNick, text });
-  }
+  
+  // Send to all connected participants
+  Object.values(dataConnections).forEach(conn => {
+    if (conn?.open) {
+      conn.send({ type: 'chat', nick: myNick, text });
+    }
+  });
 }
 
 function toggleExpand() {
