@@ -315,12 +315,116 @@
   .send-btn:hover { background: #8d7ef8; }
   .send-btn:active { transform: scale(0.94); }
 
+  /* Auth */
+  .auth-buttons { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .btn-oauth {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 16px; font-size: 13px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); cursor: pointer; transition: all 0.15s;
+  }
+  .btn-oauth:hover { border-color: var(--border-bright); background: rgba(255,255,255,0.05); }
+  .btn-github svg { fill: #fff; }
+  .btn-google svg { fill: #fff; }
+
+  .user-profile { margin-bottom: 16px; }
+  .profile-info { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); }
+  .profile-avatar { width: 40px; height: 40px; border-radius: 50%; }
+  .profile-details { flex: 1; min-width: 0; }
+  .profile-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .btn-logout { font-size: 11px; padding: 4px 10px; background: rgba(247,106,138,0.1); color: var(--accent3); border: 1px solid rgba(247,106,138,0.2); border-radius: 5px; cursor: pointer; transition: all 0.15s; }
+  .btn-logout:hover { background: rgba(247,106,138,0.2); }
+
+  /* Context Menu */
+  .context-menu {
+    position: fixed; background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 1000; min-width: 150px;
+  }
+  .context-item {
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    transition: background 0.15s; display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text);
+  }
+  .context-item:hover { background: rgba(255,255,255,0.05); }
+
+  /* Modal */
+  .modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; backdrop-filter: blur(4px);
+  }
+  .modal-content {
+    background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: 16px; width: 90%; max-width: 400px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .modal-large { max-width: 500px; }
+  .modal-header {
+    padding: 18px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-weight: 600; font-size: 15px; }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 6px; border: none;
+    background: rgba(247,106,138,0.1); color: var(--accent3);
+    cursor: pointer; transition: all 0.15s; font-size: 14px;
+  }
+  .modal-close:hover { background: rgba(247,106,138,0.2); }
+  .modal-body { padding: 20px; }
+
+  .volume-slider, .setting-slider {
+    width: 100%; height: 6px; border-radius: 3px;
+    background: var(--surface2); outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  .volume-slider::-webkit-slider-thumb, .setting-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+    box-shadow: 0 2px 8px rgba(124,106,247,0.4);
+  }
+  .volume-slider::-moz-range-thumb, .setting-slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: none;
+    box-shadow: 0 2px 8px rgba(124,106,247,0.4);
+  }
+  .volume-label, .setting-value {
+    text-align: center; margin-top: 12px;
+    font-family: 'Space Mono', monospace; font-size: 18px;
+    color: var(--accent); font-weight: 700;
+  }
+
+  .setting-group {
+    margin-bottom: 20px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .setting-group:last-of-type { border-bottom: none; padding-bottom: 0; }
+  .setting-label {
+    display: block; font-size: 13px; margin-bottom: 10px;
+    color: var(--text); cursor: pointer;
+  }
+  .setting-label input[type="checkbox"] {
+    margin-right: 8px; width: 16px; height: 16px;
+    cursor: pointer; accent-color: var(--accent);
+  }
+  
+  .setting-select {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; color: var(--text);
+    font-family: 'Syne', sans-serif; font-size: 13px;
+    outline: none; cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .setting-select:hover { border-color: var(--border-bright); }
+  .setting-select:focus { border-color: rgba(124,106,247,0.4); }
+
   @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
   audio { display: none; }
 </style>
 </head>
 <body>
-<audio id="remoteAudio" autoplay playsinline></audio>
 
 <div class="app">
   <div class="wordmark">
@@ -334,6 +438,28 @@
     <div class="idle-view">
       <div class="panel">
         <div class="panel-label">Профиль</div>
+        
+        <div class="auth-buttons" id="authButtons">
+          <button class="btn btn-oauth btn-github" onclick="loginGithub()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            GitHub
+          </button>
+          <button class="btn btn-oauth btn-google" onclick="loginGoogle()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z"/></svg>
+            Google
+          </button>
+        </div>
+        
+        <div class="user-profile" id="userProfile" style="display:none">
+          <div class="profile-info">
+            <img class="profile-avatar" id="profileAvatar" src="" alt="" />
+            <div class="profile-details">
+              <div class="profile-name" id="profileName"></div>
+              <button class="btn-logout" onclick="logout()">Выйти</button>
+            </div>
+          </div>
+        </div>
+
         <div class="field">
           <label class="field-label">Твой ник</label>
           <div class="input-wrap">
@@ -415,6 +541,7 @@
 
         <div class="controls">
           <button class="ctrl-btn" id="micBtn" onclick="toggleMic()" title="Микрофон">🎙</button>
+          <button class="ctrl-btn" onclick="openSettings()" title="Настройки">⚙️</button>
           <div class="ctrl-info">канал <span id="currentRoom"></span></div>
           <button class="ctrl-btn ctrl-hangup" onclick="hangup()" title="Выйти">📵</button>
         </div>
@@ -430,6 +557,79 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div class="context-menu" id="contextMenu" style="display:none">
+  <div class="context-item" onclick="adjustVolume()">
+    <span>🔊</span> Громкость
+  </div>
+</div>
+
+<!-- Volume Modal -->
+<div class="modal" id="volumeModal" style="display:none">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">Громкость: <span id="volumeUserNick"></span></span>
+      <button class="modal-close" onclick="closeVolumeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="range" class="volume-slider" id="volumeSlider" min="0" max="200" value="100" />
+      <div class="volume-label"><span id="volumeValue">100</span>%</div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal" id="settingsModal" style="display:none">
+  <div class="modal-content modal-large">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Настройки аудио</span>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      
+      <div class="setting-group">
+        <label class="setting-label">Устройство ввода (микрофон)</label>
+        <select class="setting-select" id="inputDevice">
+          <option value="">По умолчанию</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">Устройство вывода (динамики)</label>
+        <select class="setting-select" id="outputDevice">
+          <option value="">По умолчанию</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label class="setting-label">Чувствительность микрофона</label>
+        <input type="range" class="setting-slider" id="sensitivitySlider" min="0" max="100" value="50" />
+        <div class="setting-value"><span id="sensitivityValue">50</span>%</div>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">
+          <input type="checkbox" id="noiseSuppression" checked /> Шумоподавление
+        </label>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">
+          <input type="checkbox" id="echoCancellation" checked /> Эхоподавление
+        </label>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">
+          <input type="checkbox" id="autoGainControl" checked /> Автоматическая регулировка усиления
+        </label>
+      </div>
+
+      <button class="btn btn-accent" onclick="applyAudioSettings()">Применить</button>
+    </div>
   </div>
 </div>
 
@@ -530,11 +730,149 @@ let myPeer = null;
 let mediaConnections = {}; // { peerId: MediaConnection }
 let dataConnections = {}; // { peerId: DataConnection }
 let participants = {}; // { peerId: { nick, stream } }
+let participantVolumes = {}; // { peerId: volume }
 let localStream = null;
 let isMuted = false;
 let myNick = 'anon';
 let room = '';
 let isHost = false;
+let currentContextPeerId = null;
+let audioSettings = {
+  noiseSuppression: true,
+  echoCancellation: true,
+  autoGainControl: true,
+  sensitivity: 50,
+  inputDeviceId: '',
+  outputDeviceId: ''
+};
+
+// OAuth Configuration
+// Для работы авторизации нужно:
+// 1. GitHub: https://github.com/settings/developers → New OAuth App
+//    - Homepage URL: твой домен
+//    - Authorization callback URL: твой домен
+//    - Скопируй Client ID
+// 2. Google: https://console.cloud.google.com/apis/credentials
+//    - Create OAuth 2.0 Client ID
+//    - Authorized redirect URIs: твой домен
+//    - Скопируй Client ID
+// 3. Замени YOUR_GITHUB_CLIENT_ID и YOUR_GOOGLE_CLIENT_ID ниже
+const OAUTH_CONFIG = {
+  github: {
+    clientId: 'YOUR_GITHUB_CLIENT_ID',
+    redirectUri: window.location.origin,
+    scope: 'read:user'
+  },
+  google: {
+    clientId: 'YOUR_GOOGLE_CLIENT_ID',
+    redirectUri: window.location.origin,
+    scope: 'profile email'
+  }
+};
+
+// Check for saved user
+window.addEventListener('load', () => {
+  const savedUser = localStorage.getItem('void_user');
+  if (savedUser) {
+    const user = JSON.parse(savedUser);
+    showUserProfile(user);
+  }
+  
+  // Load saved audio settings
+  const savedSettings = localStorage.getItem('void_audio_settings');
+  if (savedSettings) {
+    const settings = JSON.parse(savedSettings);
+    audioSettings = { ...audioSettings, ...settings };
+  }
+  
+  // Load saved volumes
+  const savedVolumes = localStorage.getItem('void_volumes');
+  if (savedVolumes) {
+    participantVolumes = JSON.parse(savedVolumes);
+  }
+  
+  // Check OAuth callback
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const state = urlParams.get('state');
+  if (code && state) {
+    handleOAuthCallback(code, state);
+  }
+  
+  const hash = decodeURIComponent(location.hash.slice(1));
+  if (hash) $('roomInput').value = hash;
+  
+  // Auto-reconnect to saved room
+  const savedRoom = sessionStorage.getItem('void_current_room');
+  const savedNick = sessionStorage.getItem('void_current_nick');
+  const savedIsHost = sessionStorage.getItem('void_is_host');
+  
+  if (savedRoom && savedNick) {
+    $('roomInput').value = savedRoom;
+    $('nickInput').value = savedNick;
+    
+    // Show reconnect prompt
+    if (confirm(`Переподключиться к комнате #${savedRoom} как @${savedNick}?`)) {
+      setTimeout(() => joinRoom(), 500);
+    } else {
+      // Clear saved state if user declines
+      sessionStorage.removeItem('void_current_room');
+      sessionStorage.removeItem('void_current_nick');
+      sessionStorage.removeItem('void_is_host');
+    }
+  }
+});
+
+function loginGithub() {
+  alert('🚧 Авторизация через GitHub временно недоступна. Используй ник для входа.');
+}
+
+function loginGoogle() {
+  alert('🚧 Авторизация через Google временно недоступна. Используй ник для входа.');
+}
+
+async function handleOAuthCallback(code, state) {
+  const savedState = localStorage.getItem('oauth_state');
+  const provider = localStorage.getItem('oauth_provider');
+  
+  if (state !== savedState) {
+    alert('Ошибка авторизации: неверный state');
+    return;
+  }
+  
+  // В реальном приложении нужен backend для обмена code на token
+  // Здесь упрощенная версия - сохраняем mock данные
+  const mockUser = {
+    provider,
+    name: provider === 'github' ? 'GitHub User' : 'Google User',
+    avatar: provider === 'github' 
+      ? 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
+      : 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png'
+  };
+  
+  localStorage.setItem('void_user', JSON.stringify(mockUser));
+  showUserProfile(mockUser);
+  
+  // Clean up URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+  localStorage.removeItem('oauth_state');
+  localStorage.removeItem('oauth_provider');
+}
+
+function showUserProfile(user) {
+  $('authButtons').style.display = 'none';
+  $('userProfile').style.display = 'block';
+  $('profileAvatar').src = user.avatar;
+  $('profileName').textContent = user.name;
+  $('nickInput').value = user.name.split(' ')[0];
+}
+
+function logout() {
+  localStorage.removeItem('void_user');
+  $('authButtons').style.display = 'flex';
+  $('userProfile').style.display = 'none';
+  $('nickInput').value = '';
+}
 
 // UI helpers
 const $ = id => document.getElementById(id);
@@ -563,6 +901,15 @@ function addMsg(nick, text, side) {
   }
   box.appendChild(el);
   box.scrollTop = box.scrollHeight;
+  
+  // Save chat history to sessionStorage
+  if (room) {
+    const chatHistory = JSON.parse(sessionStorage.getItem('void_chat_' + room) || '[]');
+    chatHistory.push({ nick, text, side, time: Date.now() });
+    // Keep only last 50 messages
+    if (chatHistory.length > 50) chatHistory.shift();
+    sessionStorage.setItem('void_chat_' + room, JSON.stringify(chatHistory));
+  }
 }
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -590,7 +937,21 @@ async function joinRoom() {
 
   setLog('— запрашиваем микрофон —');
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const constraints = {
+      audio: {
+        echoCancellation: audioSettings.echoCancellation,
+        noiseSuppression: audioSettings.noiseSuppression,
+        autoGainControl: audioSettings.autoGainControl
+      }, 
+      video: false 
+    };
+    
+    // Add device ID if selected
+    if (audioSettings.inputDeviceId) {
+      constraints.audio.deviceId = { exact: audioSettings.inputDeviceId };
+    }
+    
+    localStream = await navigator.mediaDevices.getUserMedia(constraints);
   } catch(e) {
     setLog('❌ нет доступа к микрофону', 'err');
     return;
@@ -702,7 +1063,7 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
 }
 
 function handleMediaConn(call, peerId) {
-  call.on('stream', remoteStream => {
+  call.on('stream', async remoteStream => {
     const nick = call.metadata?.nick || peerId.slice(0, 8);
     participants[peerId] = { nick, stream: remoteStream };
     
@@ -716,6 +1077,19 @@ function handleMediaConn(call, peerId) {
       document.body.appendChild(audio);
     }
     audio.srcObject = remoteStream;
+    
+    // Apply saved volume
+    const savedVolume = participantVolumes[peerId] || 100;
+    audio.volume = savedVolume / 100;
+    
+    // Apply output device if selected
+    if (audioSettings.outputDeviceId && typeof audio.setSinkId !== 'undefined') {
+      try {
+        await audio.setSinkId(audioSettings.outputDeviceId);
+      } catch(e) {
+        console.error('Error setting output device:', e);
+      }
+    }
     
     addParticipantToUI(peerId, nick);
     sysMsg('🔗 @' + nick + ' подключился');
@@ -842,6 +1216,32 @@ function enterCallUI() {
 
   const url = location.href.split('#')[0] + '#' + encodeURIComponent(room);
   $('inviteUrl').value = url;
+  
+  // Save current session
+  sessionStorage.setItem('void_current_room', room);
+  sessionStorage.setItem('void_current_nick', myNick);
+  sessionStorage.setItem('void_is_host', isHost ? 'true' : 'false');
+  
+  // Restore chat history
+  const chatHistory = JSON.parse(sessionStorage.getItem('void_chat_' + room) || '[]');
+  chatHistory.forEach(msg => {
+    const box = $('chatMsgs');
+    const el = document.createElement('div');
+    el.className = 'msg';
+    if (msg.side === 'sys') {
+      el.innerHTML = `<div class="msg-av sys">—</div>
+        <div class="msg-body"><div class="msg-text sys">${esc(msg.text)}</div></div>`;
+    } else {
+      const initials = (msg.nick||'?').slice(0,2).toUpperCase();
+      el.innerHTML = `<div class="msg-av ${msg.side}">${initials}</div>
+        <div class="msg-body">
+          <div class="msg-nick ${msg.side}">@${esc(msg.nick)}</div>
+          <div class="msg-text">${esc(msg.text)}</div>
+        </div>`;
+    }
+    box.appendChild(el);
+  });
+  $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
 
 function toggleMic() {
@@ -884,7 +1284,13 @@ function hangup() {
   $('micBtn').textContent = '🎙';
   $('micBtn').classList.remove('muted-on');
   $('chatMsgs').innerHTML = '';
-  $('remoteAudio').srcObject = null;
+  
+  // Clear saved session (but keep chat history)
+  sessionStorage.removeItem('void_current_room');
+  sessionStorage.removeItem('void_current_nick');
+  sessionStorage.removeItem('void_is_host');
+  // Uncomment to clear chat history on hangup:
+  // if (room) sessionStorage.removeItem('void_chat_' + room);
 }
 
 function kickUser(peerId) {
@@ -936,10 +1342,184 @@ function toggleExpand() {
   btn.textContent = list.classList.contains('expanded') ? '−' : '⋯';
 }
 
-// Auto-join from URL hash
-window.addEventListener('load', () => {
-  const hash = decodeURIComponent(location.hash.slice(1));
-  if (hash) $('roomInput').value = hash;
+// Context menu for participants
+document.addEventListener('contextmenu', (e) => {
+  const participant = e.target.closest('.participant[id^="participant-"]');
+  if (participant) {
+    e.preventDefault();
+    const peerId = participant.id.replace('participant-', '');
+    currentContextPeerId = peerId;
+    
+    const menu = $('contextMenu');
+    menu.style.display = 'block';
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+  }
+});
+
+document.addEventListener('click', () => {
+  $('contextMenu').style.display = 'none';
+});
+
+function adjustVolume() {
+  if (!currentContextPeerId) return;
+  
+  const nick = participants[currentContextPeerId]?.nick || 'пользователь';
+  $('volumeUserNick').textContent = '@' + nick;
+  
+  const currentVolume = participantVolumes[currentContextPeerId] || 100;
+  $('volumeSlider').value = currentVolume;
+  $('volumeValue').textContent = currentVolume;
+  
+  $('volumeModal').style.display = 'flex';
+  $('contextMenu').style.display = 'none';
+}
+
+$('volumeSlider').addEventListener('input', (e) => {
+  const value = e.target.value;
+  $('volumeValue').textContent = value;
+  
+  if (currentContextPeerId) {
+    participantVolumes[currentContextPeerId] = value;
+    
+    // Save volumes to localStorage
+    localStorage.setItem('void_volumes', JSON.stringify(participantVolumes));
+    
+    // Apply volume to audio element
+    const audio = document.getElementById('audio-' + currentContextPeerId);
+    if (audio) {
+      audio.volume = value / 100;
+    }
+  }
+});
+
+function closeVolumeModal() {
+  $('volumeModal').style.display = 'none';
+  currentContextPeerId = null;
+}
+
+// Settings
+async function loadAudioDevices() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    
+    const inputSelect = $('inputDevice');
+    const outputSelect = $('outputDevice');
+    
+    // Clear existing options except default
+    inputSelect.innerHTML = '<option value="">По умолчанию</option>';
+    outputSelect.innerHTML = '<option value="">По умолчанию</option>';
+    
+    devices.forEach(device => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = device.label || `${device.kind} ${device.deviceId.slice(0, 8)}`;
+      
+      if (device.kind === 'audioinput') {
+        inputSelect.appendChild(option);
+      } else if (device.kind === 'audiooutput') {
+        outputSelect.appendChild(option);
+      }
+    });
+    
+    // Set saved values
+    inputSelect.value = audioSettings.inputDeviceId;
+    outputSelect.value = audioSettings.outputDeviceId;
+    
+  } catch(e) {
+    console.error('Error loading devices:', e);
+  }
+}
+
+async function openSettings() {
+  await loadAudioDevices();
+  
+  $('noiseSuppression').checked = audioSettings.noiseSuppression;
+  $('echoCancellation').checked = audioSettings.echoCancellation;
+  $('autoGainControl').checked = audioSettings.autoGainControl;
+  $('sensitivitySlider').value = audioSettings.sensitivity;
+  $('sensitivityValue').textContent = audioSettings.sensitivity;
+  
+  $('settingsModal').style.display = 'flex';
+}
+
+function closeSettings() {
+  $('settingsModal').style.display = 'none';
+}
+
+$('sensitivitySlider').addEventListener('input', (e) => {
+  $('sensitivityValue').textContent = e.target.value;
+});
+
+async function applyAudioSettings() {
+  audioSettings.noiseSuppression = $('noiseSuppression').checked;
+  audioSettings.echoCancellation = $('echoCancellation').checked;
+  audioSettings.autoGainControl = $('autoGainControl').checked;
+  audioSettings.sensitivity = parseInt($('sensitivitySlider').value);
+  audioSettings.inputDeviceId = $('inputDevice').value;
+  audioSettings.outputDeviceId = $('outputDevice').value;
+  
+  // Save settings to localStorage
+  localStorage.setItem('void_audio_settings', JSON.stringify(audioSettings));
+  
+  // Reacquire media stream with new settings
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    
+    try {
+      const constraints = {
+        audio: {
+          echoCancellation: audioSettings.echoCancellation,
+          noiseSuppression: audioSettings.noiseSuppression,
+          autoGainControl: audioSettings.autoGainControl
+        },
+        video: false
+      };
+      
+      // Add device ID if selected
+      if (audioSettings.inputDeviceId) {
+        constraints.audio.deviceId = { exact: audioSettings.inputDeviceId };
+      }
+      
+      localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Update all media connections with new stream
+      Object.values(mediaConnections).forEach(conn => {
+        const sender = conn.peerConnection.getSenders().find(s => s.track?.kind === 'audio');
+        if (sender && localStream.getAudioTracks()[0]) {
+          sender.replaceTrack(localStream.getAudioTracks()[0]);
+        }
+      });
+      
+      sysMsg('✓ Настройки применены');
+    } catch(e) {
+      sysMsg('⚠ Ошибка применения настроек: ' + e.message);
+    }
+  }
+  
+  // Apply output device to all audio elements
+  if (audioSettings.outputDeviceId && typeof HTMLMediaElement.prototype.setSinkId !== 'undefined') {
+    Object.keys(participants).forEach(async (peerId) => {
+      const audio = document.getElementById('audio-' + peerId);
+      if (audio) {
+        try {
+          await audio.setSinkId(audioSettings.outputDeviceId);
+        } catch(e) {
+          console.error('Error setting output device:', e);
+        }
+      }
+    });
+  }
+  
+  closeSettings();
+}
+
+// Close modals on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeVolumeModal();
+    closeSettings();
+  }
 });
 </script>
 </body>
