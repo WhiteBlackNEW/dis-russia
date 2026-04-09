@@ -1247,8 +1247,6 @@ function showScreenShare(peerId, stream) {
   const nick = participants[peerId]?.nick || 'пользователь';
   sysMsg('🖥️ @' + nick + ' показывает экран (клик для полноэкранного режима)');
 }
-  sysMsg('🖥️ @' + nick + ' показывает экран (клик для полноэкранного режима)');
-}
 
 function setupDataConn(conn, peerId) {
   conn.on('open', () => {
