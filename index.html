@@ -441,6 +441,22 @@
     transition: transform 0.2s;
   }
   .screen-share-video:hover { transform: scale(1.02); }
+  
+  .screen-share-wrapper {
+    position: fixed; bottom: 80px; right: 20px;
+    z-index: 100;
+  }
+  .screen-share-wrapper .screen-share-video {
+    position: relative; bottom: auto; right: auto;
+  }
+  .screen-share-label {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(124,106,247,0.9); color: #fff;
+    padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+    font-family: 'Space Mono', monospace;
+    pointer-events: none;
+  }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
   audio { display: none; }
@@ -791,26 +807,26 @@ async function applyRNNoiseSuppression(stream) {
     // High-pass filter to remove low frequency rumble
     const highpass = audioContext.createBiquadFilter();
     highpass.type = 'highpass';
-    highpass.frequency.value = 100;
-    highpass.Q.value = 0.5;
+    highpass.frequency.value = 85;
+    highpass.Q.value = 0.7;
     
     // Low-pass to remove high frequency hiss
     const lowpass = audioContext.createBiquadFilter();
     lowpass.type = 'lowpass';
-    lowpass.frequency.value = 8000;
-    lowpass.Q.value = 0.5;
+    lowpass.frequency.value = 10000;
+    lowpass.Q.value = 0.7;
     
     // Compressor for consistent volume
     const compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.value = -30;
-    compressor.knee.value = 20;
-    compressor.ratio.value = 8;
+    compressor.threshold.value = -24;
+    compressor.knee.value = 30;
+    compressor.ratio.value = 12;
     compressor.attack.value = 0.003;
     compressor.release.value = 0.25;
     
     // Gain for sensitivity
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = audioSettings.sensitivity / 50;
+    gainNode.gain.value = 1.2; // Slight boost
     
     // Simple chain without aggressive gating
     source.connect(highpass);
@@ -820,8 +836,9 @@ async function applyRNNoiseSuppression(stream) {
     gainNode.connect(destination);
     
     // Store processor for cleanup
-    krispProcessor = { source, destination, gainNode };
+    krispProcessor = { source, destination, gainNode, highpass, lowpass, compressor };
     
+    console.log('RNNoise applied, output stream tracks:', destination.stream.getTracks().length);
     return destination.stream;
   } catch(e) {
     console.error('RNNoise suppression error:', e);
@@ -833,10 +850,10 @@ function cleanupNoiseProcessor() {
   if (krispProcessor) {
     try {
       krispProcessor.source.disconnect();
+      krispProcessor.highpass.disconnect();
+      krispProcessor.lowpass.disconnect();
+      krispProcessor.compressor.disconnect();
       krispProcessor.gainNode.disconnect();
-      if (krispProcessor.destination) {
-        krispProcessor.destination.disconnect();
-      }
     } catch(e) {
       console.error('Cleanup error:', e);
     }
@@ -1048,10 +1065,13 @@ async function joinRoom() {
     }
     
     let stream = await navigator.mediaDevices.getUserMedia(constraints);
+    console.log('Got microphone stream, tracks:', stream.getTracks().length);
     
     // Apply RNNoise if enabled
     if (audioSettings.noiseSuppressionMode === 'rnnoise') {
+      console.log('Applying RNNoise...');
       stream = await applyRNNoiseSuppression(stream);
+      console.log('RNNoise applied, new stream tracks:', stream.getTracks().length);
     }
     
     localStream = stream;
@@ -1090,6 +1110,14 @@ function tryAsHost(hostPeerId, serverRetry = false) {
       call.answer(localStream);
       mediaConnections[peerId] = call;
       handleMediaConn(call, peerId);
+      
+      // Listen for track events on the peer connection
+      call.peerConnection.addEventListener('track', (event) => {
+        console.log('Host received track event:', event.track.kind);
+        if (event.track.kind === 'video') {
+          showScreenShare(peerId, event.streams[0]);
+        }
+      });
     });
 
     myPeer.on('connection', conn => {
@@ -1132,6 +1160,14 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
       });
       mediaConnections[hostPeerId] = call;
       handleMediaConn(call, hostPeerId);
+      
+      // Listen for track events on the peer connection
+      call.peerConnection.addEventListener('track', (event) => {
+        console.log('Guest received track event:', event.track.kind);
+        if (event.track.kind === 'video') {
+          showScreenShare(hostPeerId, event.streams[0]);
+        }
+      });
 
       // Data channel for chat
       const conn = myPeer.connect(hostPeerId, {
@@ -1225,6 +1261,22 @@ function showScreenShare(peerId, stream) {
     video.playsInline = true;
     video.muted = true; // Mute to avoid echo
     video.className = 'screen-share-video';
+    
+    // Add label for self preview
+    if (peerId === 'self') {
+      const label = document.createElement('div');
+      label.className = 'screen-share-label';
+      label.textContent = 'Твоя демонстрация';
+      video.appendChild = function() {};
+      const wrapper = document.createElement('div');
+      wrapper.className = 'screen-share-wrapper';
+      wrapper.appendChild(video);
+      wrapper.appendChild(label);
+      document.body.appendChild(wrapper);
+    } else {
+      document.body.appendChild(video);
+    }
+    
     video.onclick = () => {
       if (video.requestFullscreen) {
         video.requestFullscreen();
@@ -1232,20 +1284,17 @@ function showScreenShare(peerId, stream) {
         video.webkitRequestFullscreen();
       }
     };
-    document.body.appendChild(video);
+    
     console.log('Video element created');
   }
   
-  // Create new MediaStream with only video track
-  const videoStream = new MediaStream();
-  stream.getVideoTracks().forEach(track => {
-    console.log('Adding video track:', track.id);
-    videoStream.addTrack(track);
-  });
-  video.srcObject = videoStream;
+  // Set video source
+  video.srcObject = stream;
   
-  const nick = participants[peerId]?.nick || 'пользователь';
-  sysMsg('🖥️ @' + nick + ' показывает экран (клик для полноэкранного режима)');
+  if (peerId !== 'self') {
+    const nick = participants[peerId]?.nick || 'пользователь';
+    sysMsg('🖥️ @' + nick + ' показывает экран (клик для полноэкранного режима)');
+  }
 }
 
 function setupDataConn(conn, peerId) {
@@ -1422,34 +1471,16 @@ async function toggleScreen() {
       
       const videoTrack = screenStream.getVideoTracks()[0];
       
-      // Create combined stream with audio and video
-      const combinedStream = new MediaStream();
+      // Show preview for yourself
+      showScreenShare('self', screenStream);
       
-      // Add audio from localStream
-      if (localStream) {
-        localStream.getAudioTracks().forEach(track => combinedStream.addTrack(track));
-      }
-      
-      // Add video from screenStream
-      combinedStream.addTrack(videoTrack);
-      
-      // Replace stream in all connections
+      // Add video track to all existing connections
       Object.entries(mediaConnections).forEach(([peerId, conn]) => {
-        // Get all senders
-        const senders = conn.peerConnection.getSenders();
-        
-        // Replace audio track
-        const audioSender = senders.find(s => s.track?.kind === 'audio');
-        if (audioSender && localStream) {
-          audioSender.replaceTrack(localStream.getAudioTracks()[0]);
-        }
-        
-        // Add or replace video track
-        const videoSender = senders.find(s => s.track?.kind === 'video');
-        if (videoSender) {
-          videoSender.replaceTrack(videoTrack);
-        } else {
-          conn.peerConnection.addTrack(videoTrack, combinedStream);
+        try {
+          conn.peerConnection.addTrack(videoTrack, screenStream);
+          console.log('Added video track to connection:', peerId);
+        } catch(e) {
+          console.error('Error adding track to', peerId, e);
         }
       });
       
@@ -1480,6 +1511,10 @@ async function toggleScreen() {
 }
 
 function stopScreenShare() {
+  // Remove self preview
+  const selfVideo = document.getElementById('screen-self');
+  if (selfVideo) selfVideo.remove();
+  
   if (screenStream) {
     screenStream.getTracks().forEach(t => t.stop());
     
@@ -1488,7 +1523,12 @@ function stopScreenShare() {
       const senders = conn.peerConnection.getSenders();
       senders.forEach(sender => {
         if (sender.track?.kind === 'video') {
-          conn.peerConnection.removeTrack(sender);
+          try {
+            conn.peerConnection.removeTrack(sender);
+            console.log('Removed video track from connection');
+          } catch(e) {
+            console.error('Error removing track:', e);
+          }
         }
       });
     });
