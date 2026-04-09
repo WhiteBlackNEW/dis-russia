@@ -1268,17 +1268,6 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
 }
 
 function handleMediaConn(call, peerId) {
-  // Handle renegotiation
-  call.peerConnection.addEventListener('negotiationneeded', async () => {
-    console.log('Negotiation needed for', peerId);
-    try {
-      await call.peerConnection.setLocalDescription();
-      console.log('Local description set during renegotiation');
-    } catch(e) {
-      console.error('Negotiation error:', e);
-    }
-  });
-  
   call.on('stream', async remoteStream => {
     console.log('Received stream from', peerId, 'audio tracks:', remoteStream.getAudioTracks().length, 'video tracks:', remoteStream.getVideoTracks().length);
     
@@ -1326,27 +1315,28 @@ function handleMediaConn(call, peerId) {
     console.log('Track event fired! Track kind:', event.track.kind, 'Streams:', event.streams.length);
     if (event.track.kind === 'video' && event.streams[0]) {
       const nick = participants[peerId]?.nick || peerId.slice(0, 8);
-      console.log('Showing screen share from track event for', nick);
+      console.log('Video track added, showing screen share for', nick);
       
-      // Wait a bit for the stream to be ready
-      setTimeout(() => {
-        showScreenShare(peerId, event.streams[0], nick);
-      }, 100);
+      // Update the stream in participants
+      participants[peerId].stream = event.streams[0];
+      
+      // Show screen share immediately
+      showScreenShare(peerId, event.streams[0], nick);
     }
   });
   
-  // Also listen on the connection itself
-  call.peerConnection.ontrack = (event) => {
-    console.log('ontrack fired! Track kind:', event.track.kind);
-    if (event.track.kind === 'video' && event.streams[0]) {
-      const nick = participants[peerId]?.nick || peerId.slice(0, 8);
-      console.log('Showing screen share from ontrack for', nick);
-      
-      setTimeout(() => {
-        showScreenShare(peerId, event.streams[0], nick);
-      }, 100);
+  // Listen for tracks being removed
+  call.peerConnection.addEventListener('removetrack', (event) => {
+    console.log('Track removed! Track kind:', event.track.kind);
+    if (event.track.kind === 'video') {
+      const overlay = document.getElementById('screen-overlay-' + peerId);
+      if (overlay) {
+        overlay.remove();
+        const nick = participants[peerId]?.nick || 'пользователь';
+        sysMsg('🖥️ @' + nick + ' остановил демонстрацию экрана');
+      }
     }
-  };
+  });
   
   call.on('close', () => {
     removeParticipant(peerId);
@@ -1470,12 +1460,16 @@ function setupDataConn(conn, peerId) {
       setTimeout(() => hangup(), 1000);
     }
     if (data.type === 'screen-share-start') {
-      sysMsg('🖥️ @' + (data.nick || 'пользователь') + ' начал демонстрацию экрана');
+      // Screen share will be shown when video track arrives
+      console.log('Screen share start notification from', data.nick);
     }
     if (data.type === 'screen-share-stop') {
-      const video = document.getElementById('screen-' + peerId);
-      if (video) video.remove();
-      sysMsg('🖥️ @' + (data.nick || 'пользователь') + ' остановил демонстрацию экрана');
+      const overlay = document.getElementById('screen-overlay-' + peerId);
+      if (overlay) {
+        overlay.remove();
+        const nick = data.nick || participants[peerId]?.nick || 'пользователь';
+        sysMsg('🖥️ @' + nick + ' остановил демонстрацию экрана');
+      }
     }
   });
   
@@ -1627,25 +1621,25 @@ async function toggleScreen() {
       // Show preview for yourself
       showScreenShare('self', screenStream, myNick);
       
-      // Add video track to existing connections without recreating them
-      Object.entries(mediaConnections).forEach(([peerId, call]) => {
-        try {
-          // Just add the video track to existing connection
-          const sender = call.peerConnection.addTrack(videoTrack, screenStream);
-          console.log('Added video track to existing connection:', peerId, 'sender:', sender);
+      // Add video track to existing connections using replaceTrack
+      const peerIds = Object.keys(mediaConnections);
+      for (const peerId of peerIds) {
+        const call = mediaConnections[peerId];
+        if (call && call.peerConnection) {
+          const senders = call.peerConnection.getSenders();
+          const videoSender = senders.find(s => s.track?.kind === 'video');
           
-          // Trigger renegotiation
-          call.peerConnection.createOffer()
-            .then(offer => call.peerConnection.setLocalDescription(offer))
-            .then(() => {
-              console.log('Renegotiation offer created for', peerId);
-            })
-            .catch(e => console.error('Renegotiation error:', e));
-            
-        } catch(e) {
-          console.error('Error adding video track:', e);
+          if (videoSender) {
+            // Replace existing video track
+            await videoSender.replaceTrack(videoTrack);
+          } else {
+            // Add new video track
+            call.peerConnection.addTrack(videoTrack, screenStream);
+          }
+          
+          console.log('Added video track for', peerId);
         }
-      });
+      }
       
       // Send notification about screen share
       Object.values(dataConnections).forEach(conn => {
@@ -1673,28 +1667,29 @@ async function toggleScreen() {
   }
 }
 
-function stopScreenShare() {
+async function stopScreenShare() {
   // Remove self preview overlay
   const selfOverlay = document.getElementById('screen-overlay-self');
   if (selfOverlay) selfOverlay.remove();
   
   if (screenStream) {
+    const videoTrack = screenStream.getVideoTracks()[0];
     screenStream.getTracks().forEach(t => t.stop());
     
-    // Remove video tracks from existing connections
-    Object.values(mediaConnections).forEach(call => {
-      try {
+    // Remove video track from existing connections
+    const peerIds = Object.keys(mediaConnections);
+    for (const peerId of peerIds) {
+      const call = mediaConnections[peerId];
+      if (call && call.peerConnection) {
         const senders = call.peerConnection.getSenders();
-        senders.forEach(sender => {
-          if (sender.track?.kind === 'video') {
-            call.peerConnection.removeTrack(sender);
-            console.log('Removed video track from connection');
-          }
-        });
-      } catch(e) {
-        console.error('Error removing video track:', e);
+        const videoSender = senders.find(s => s.track?.kind === 'video');
+        
+        if (videoSender) {
+          call.peerConnection.removeTrack(videoSender);
+          console.log('Removed video track for', peerId);
+        }
       }
-    });
+    }
     
     // Send notification about screen share stop
     Object.values(dataConnections).forEach(conn => {
