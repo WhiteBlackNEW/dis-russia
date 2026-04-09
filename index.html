@@ -358,7 +358,7 @@
   .modal {
     position: fixed; inset: 0; background: rgba(0,0,0,0.7);
     display: flex; align-items: center; justify-content: center;
-    z-index: 999; backdrop-filter: blur(4px);
+    z-index: 1001; backdrop-filter: blur(4px);
   }
   .modal-content {
     background: var(--surface); border: 1px solid var(--border-bright);
@@ -436,7 +436,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.95);
-    z-index: 1000;
+    z-index: 999;
     display: flex;
     flex-direction: column;
     animation: fadeIn 0.2s ease;
@@ -1588,7 +1588,7 @@ async function toggleScreen() {
           displaySurface: 'monitor',
           width: { ideal: 1920 },
           height: { ideal: 1080 },
-          frameRate: { ideal: 15, max: 30 } // Ограничим FPS для меньших лагов
+          frameRate: { ideal: 30 }
         }, 
         audio: false 
       });
