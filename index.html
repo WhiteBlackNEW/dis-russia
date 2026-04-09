@@ -1272,7 +1272,6 @@ function handleMediaConn(call, peerId) {
     console.log('Received stream from', peerId, 'video tracks:', remoteStream.getVideoTracks().length);
     
     const nick = call.metadata?.nick || peerId.slice(0, 8);
-    const hasVideo = call.metadata?.hasVideo || false;
     
     participants[peerId] = { nick, stream: remoteStream };
     
@@ -1302,13 +1301,22 @@ function handleMediaConn(call, peerId) {
     
     // Check if stream has video
     const videoTracks = remoteStream.getVideoTracks();
-    if (videoTracks.length > 0 || hasVideo) {
+    if (videoTracks.length > 0) {
       console.log('Stream has video, showing screen share');
       showScreenShare(peerId, remoteStream, nick);
     }
     
     addParticipantToUI(peerId, nick);
     sysMsg('🔗 @' + nick + ' подключился');
+  });
+  
+  // Listen for new tracks being added (screen share)
+  call.peerConnection.addEventListener('track', (event) => {
+    console.log('New track received:', event.track.kind);
+    if (event.track.kind === 'video' && event.streams[0]) {
+      const nick = participants[peerId]?.nick || peerId.slice(0, 8);
+      showScreenShare(peerId, event.streams[0], nick);
+    }
   });
   
   call.on('close', () => {
@@ -1577,7 +1585,10 @@ async function toggleScreen() {
       screenStream = await navigator.mediaDevices.getDisplayMedia({ 
         video: { 
           cursor: 'always',
-          displaySurface: 'monitor'
+          displaySurface: 'monitor',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 15, max: 30 } // Ограничим FPS для меньших лагов
         }, 
         audio: false 
       });
@@ -1587,35 +1598,15 @@ async function toggleScreen() {
       // Show preview for yourself
       showScreenShare('self', screenStream, myNick);
       
-      // Create combined stream with audio + video
-      const combinedStream = new MediaStream();
-      if (localStream) {
-        localStream.getAudioTracks().forEach(track => combinedStream.addTrack(track));
-      }
-      combinedStream.addTrack(videoTrack);
-      
-      // Replace stream in all existing connections
-      Object.entries(mediaConnections).forEach(([peerId, oldCall]) => {
-        console.log('Replacing stream for peer:', peerId);
-        
-        // Close old call
-        oldCall.close();
-        
-        // Create new call with video
-        const newCall = myPeer.call(peerId, combinedStream, {
-          metadata: { nick: myNick, hasVideo: true }
-        });
-        
-        mediaConnections[peerId] = newCall;
-        
-        // Setup handlers for new call
-        newCall.on('stream', (remoteStream) => {
-          console.log('Received stream after screen share');
-        });
-        
-        newCall.on('close', () => {
-          removeParticipant(peerId);
-        });
+      // Add video track to existing connections without recreating them
+      Object.entries(mediaConnections).forEach(([peerId, call]) => {
+        try {
+          // Just add the video track to existing connection
+          call.peerConnection.addTrack(videoTrack, screenStream);
+          console.log('Added video track to existing connection:', peerId);
+        } catch(e) {
+          console.error('Error adding video track:', e);
+        }
       });
       
       // Send notification about screen share
@@ -1652,28 +1643,19 @@ function stopScreenShare() {
   if (screenStream) {
     screenStream.getTracks().forEach(t => t.stop());
     
-    // Recreate connections with audio only
-    Object.entries(mediaConnections).forEach(([peerId, oldCall]) => {
-      console.log('Restoring audio-only for peer:', peerId);
-      
-      // Close old call
-      oldCall.close();
-      
-      // Create new call with audio only
-      const newCall = myPeer.call(peerId, localStream, {
-        metadata: { nick: myNick, hasVideo: false }
-      });
-      
-      mediaConnections[peerId] = newCall;
-      
-      // Setup handlers for new call
-      newCall.on('stream', (remoteStream) => {
-        console.log('Received audio stream after stopping screen share');
-      });
-      
-      newCall.on('close', () => {
-        removeParticipant(peerId);
-      });
+    // Remove video tracks from existing connections
+    Object.values(mediaConnections).forEach(call => {
+      try {
+        const senders = call.peerConnection.getSenders();
+        senders.forEach(sender => {
+          if (sender.track?.kind === 'video') {
+            call.peerConnection.removeTrack(sender);
+            console.log('Removed video track from connection');
+          }
+        });
+      } catch(e) {
+        console.error('Error removing video track:', e);
+      }
     });
     
     // Send notification about screen share stop
