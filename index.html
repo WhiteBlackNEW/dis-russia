@@ -431,31 +431,113 @@
     font-family: 'Space Mono', monospace;
   }
 
-  /* Screen Share */
-  .screen-share-video {
-    position: fixed; bottom: 80px; right: 20px;
-    width: 320px; max-width: calc(100vw - 40px);
-    border-radius: 12px; border: 2px solid var(--accent);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-    z-index: 100; cursor: pointer;
-    transition: transform 0.2s;
+  /* Screen Share - Discord Style */
+  .screen-share-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.2s ease;
   }
-  .screen-share-video:hover { transform: scale(1.02); }
   
-  .screen-share-wrapper {
-    position: fixed; bottom: 80px; right: 20px;
-    z-index: 100;
+  .screen-share-overlay.minimized {
+    inset: auto;
+    bottom: 80px;
+    right: 20px;
+    width: 320px;
+    height: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--accent);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   }
-  .screen-share-wrapper .screen-share-video {
-    position: relative; bottom: auto; right: auto;
+  
+  .screen-share-overlay.minimized .screen-share-video-large {
+    cursor: pointer;
   }
-  .screen-share-label {
-    position: absolute; top: 8px; left: 8px;
-    background: rgba(124,106,247,0.9); color: #fff;
-    padding: 4px 10px; border-radius: 6px;
-    font-size: 11px; font-weight: 600;
-    font-family: 'Space Mono', monospace;
-    pointer-events: none;
+  
+  /* Stack multiple minimized screens */
+  .screen-share-overlay.minimized:nth-of-type(2) {
+    right: 360px;
+  }
+  .screen-share-overlay.minimized:nth-of-type(3) {
+    right: 700px;
+  }
+  
+  .screen-share-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .screen-share-overlay.minimized .screen-share-header {
+    padding: 8px 12px;
+  }
+  
+  .screen-share-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  
+  .screen-share-overlay.minimized .screen-share-title {
+    font-size: 12px;
+  }
+  
+  .screen-share-controls {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .screen-share-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .screen-share-overlay.minimized .screen-share-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  
+  .screen-share-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .screen-share-close {
+    background: rgba(247, 106, 138, 0.1);
+    color: var(--accent3);
+  }
+  .screen-share-close:hover {
+    background: rgba(247, 106, 138, 0.2);
+  }
+  
+  .screen-share-video-large {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
@@ -1110,14 +1192,6 @@ function tryAsHost(hostPeerId, serverRetry = false) {
       call.answer(localStream);
       mediaConnections[peerId] = call;
       handleMediaConn(call, peerId);
-      
-      // Listen for track events on the peer connection
-      call.peerConnection.addEventListener('track', (event) => {
-        console.log('Host received track event:', event.track.kind);
-        if (event.track.kind === 'video') {
-          showScreenShare(peerId, event.streams[0]);
-        }
-      });
     });
 
     myPeer.on('connection', conn => {
@@ -1160,14 +1234,6 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
       });
       mediaConnections[hostPeerId] = call;
       handleMediaConn(call, hostPeerId);
-      
-      // Listen for track events on the peer connection
-      call.peerConnection.addEventListener('track', (event) => {
-        console.log('Guest received track event:', event.track.kind);
-        if (event.track.kind === 'video') {
-          showScreenShare(hostPeerId, event.streams[0]);
-        }
-      });
 
       // Data channel for chat
       const conn = myPeer.connect(hostPeerId, {
@@ -1203,7 +1269,11 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
 
 function handleMediaConn(call, peerId) {
   call.on('stream', async remoteStream => {
+    console.log('Received stream from', peerId, 'video tracks:', remoteStream.getVideoTracks().length);
+    
     const nick = call.metadata?.nick || peerId.slice(0, 8);
+    const hasVideo = call.metadata?.hasVideo || false;
+    
     participants[peerId] = { nick, stream: remoteStream };
     
     // Create audio element for this participant
@@ -1230,15 +1300,15 @@ function handleMediaConn(call, peerId) {
       }
     }
     
+    // Check if stream has video
+    const videoTracks = remoteStream.getVideoTracks();
+    if (videoTracks.length > 0 || hasVideo) {
+      console.log('Stream has video, showing screen share');
+      showScreenShare(peerId, remoteStream, nick);
+    }
+    
     addParticipantToUI(peerId, nick);
     sysMsg('🔗 @' + nick + ' подключился');
-  });
-  
-  call.on('track', (track, stream) => {
-    // Handle video track (screen share)
-    if (track.kind === 'video') {
-      showScreenShare(peerId, stream);
-    }
   });
   
   call.on('close', () => {
@@ -1249,51 +1319,100 @@ function handleMediaConn(call, peerId) {
     sysMsg('⚠ ошибка соединения: ' + e.message);
   });
 }
+  });
+  
+  call.on('error', e => {
+    sysMsg('⚠ ошибка соединения: ' + e.message);
+  });
+}
 
-function showScreenShare(peerId, stream) {
+function showScreenShare(peerId, stream, nick) {
   console.log('showScreenShare called for', peerId, 'video tracks:', stream.getVideoTracks().length);
   
-  let video = document.getElementById('screen-' + peerId);
-  if (!video) {
-    video = document.createElement('video');
-    video.id = 'screen-' + peerId;
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = true; // Mute to avoid echo
-    video.className = 'screen-share-video';
-    
-    // Add label for self preview
-    if (peerId === 'self') {
-      const label = document.createElement('div');
-      label.className = 'screen-share-label';
-      label.textContent = 'Твоя демонстрация';
-      video.appendChild = function() {};
-      const wrapper = document.createElement('div');
-      wrapper.className = 'screen-share-wrapper';
-      wrapper.appendChild(video);
-      wrapper.appendChild(label);
-      document.body.appendChild(wrapper);
-    } else {
-      document.body.appendChild(video);
-    }
-    
-    video.onclick = () => {
-      if (video.requestFullscreen) {
-        video.requestFullscreen();
-      } else if (video.webkitRequestFullscreen) {
-        video.webkitRequestFullscreen();
-      }
-    };
-    
-    console.log('Video element created');
+  // Remove existing overlay if any
+  const existingOverlay = document.getElementById('screen-overlay-' + peerId);
+  if (existingOverlay) existingOverlay.remove();
+  
+  // Create Discord-style overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'screen-overlay-' + peerId;
+  overlay.className = 'screen-share-overlay';
+  
+  const header = document.createElement('div');
+  header.className = 'screen-share-header';
+  
+  const title = document.createElement('div');
+  title.className = 'screen-share-title';
+  if (peerId === 'self') {
+    title.innerHTML = '🖥️ Твоя демонстрация экрана';
+  } else {
+    const displayNick = nick || participants[peerId]?.nick || 'пользователь';
+    title.innerHTML = `🖥️ Демонстрация экрана — @${displayNick}`;
   }
   
-  // Set video source
+  const controls = document.createElement('div');
+  controls.className = 'screen-share-controls';
+  
+  // Minimize/Maximize button
+  const minimizeBtn = document.createElement('button');
+  minimizeBtn.className = 'screen-share-btn';
+  minimizeBtn.innerHTML = '−';
+  minimizeBtn.title = 'Свернуть';
+  minimizeBtn.onclick = () => {
+    if (overlay.classList.contains('minimized')) {
+      overlay.classList.remove('minimized');
+      minimizeBtn.innerHTML = '−';
+      minimizeBtn.title = 'Свернуть';
+    } else {
+      overlay.classList.add('minimized');
+      minimizeBtn.innerHTML = '□';
+      minimizeBtn.title = 'Развернуть';
+    }
+  };
+  
+  // Close button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'screen-share-btn screen-share-close';
+  closeBtn.textContent = '✕';
+  closeBtn.title = 'Закрыть';
+  closeBtn.onclick = () => {
+    overlay.remove();
+    if (peerId === 'self') {
+      stopScreenShare();
+    }
+  };
+  
+  controls.appendChild(minimizeBtn);
+  controls.appendChild(closeBtn);
+  
+  header.appendChild(title);
+  header.appendChild(controls);
+  
+  const video = document.createElement('video');
+  video.id = 'screen-' + peerId;
+  video.autoplay = true;
+  video.playsInline = true;
+  video.muted = true;
+  video.className = 'screen-share-video-large';
   video.srcObject = stream;
   
+  // Click on minimized video to maximize
+  video.onclick = () => {
+    if (overlay.classList.contains('minimized')) {
+      overlay.classList.remove('minimized');
+      minimizeBtn.innerHTML = '−';
+      minimizeBtn.title = 'Свернуть';
+    }
+  };
+  
+  overlay.appendChild(header);
+  overlay.appendChild(video);
+  document.body.appendChild(overlay);
+  
+  console.log('Screen share overlay created');
+  
   if (peerId !== 'self') {
-    const nick = participants[peerId]?.nick || 'пользователь';
-    sysMsg('🖥️ @' + nick + ' показывает экран (клик для полноэкранного режима)');
+    sysMsg('🖥️ @' + (nick || participants[peerId]?.nick || 'пользователь') + ' показывает экран');
   }
 }
 
@@ -1385,8 +1504,8 @@ function removeParticipant(peerId) {
   const audio = document.getElementById('audio-' + peerId);
   if (audio) audio.remove();
   
-  const video = document.getElementById('screen-' + peerId);
-  if (video) video.remove();
+  const overlay = document.getElementById('screen-overlay-' + peerId);
+  if (overlay) overlay.remove();
   
   const nick = participants[peerId]?.nick || 'пользователь';
   delete participants[peerId];
@@ -1472,16 +1591,37 @@ async function toggleScreen() {
       const videoTrack = screenStream.getVideoTracks()[0];
       
       // Show preview for yourself
-      showScreenShare('self', screenStream);
+      showScreenShare('self', screenStream, myNick);
       
-      // Add video track to all existing connections
-      Object.entries(mediaConnections).forEach(([peerId, conn]) => {
-        try {
-          conn.peerConnection.addTrack(videoTrack, screenStream);
-          console.log('Added video track to connection:', peerId);
-        } catch(e) {
-          console.error('Error adding track to', peerId, e);
-        }
+      // Create combined stream with audio + video
+      const combinedStream = new MediaStream();
+      if (localStream) {
+        localStream.getAudioTracks().forEach(track => combinedStream.addTrack(track));
+      }
+      combinedStream.addTrack(videoTrack);
+      
+      // Replace stream in all existing connections
+      Object.entries(mediaConnections).forEach(([peerId, oldCall]) => {
+        console.log('Replacing stream for peer:', peerId);
+        
+        // Close old call
+        oldCall.close();
+        
+        // Create new call with video
+        const newCall = myPeer.call(peerId, combinedStream, {
+          metadata: { nick: myNick, hasVideo: true }
+        });
+        
+        mediaConnections[peerId] = newCall;
+        
+        // Setup handlers for new call
+        newCall.on('stream', (remoteStream) => {
+          console.log('Received stream after screen share');
+        });
+        
+        newCall.on('close', () => {
+          removeParticipant(peerId);
+        });
       });
       
       // Send notification about screen share
@@ -1511,25 +1651,34 @@ async function toggleScreen() {
 }
 
 function stopScreenShare() {
-  // Remove self preview
-  const selfVideo = document.getElementById('screen-self');
-  if (selfVideo) selfVideo.remove();
+  // Remove self preview overlay
+  const selfOverlay = document.getElementById('screen-overlay-self');
+  if (selfOverlay) selfOverlay.remove();
   
   if (screenStream) {
     screenStream.getTracks().forEach(t => t.stop());
     
-    // Remove video track from all connections
-    Object.values(mediaConnections).forEach(conn => {
-      const senders = conn.peerConnection.getSenders();
-      senders.forEach(sender => {
-        if (sender.track?.kind === 'video') {
-          try {
-            conn.peerConnection.removeTrack(sender);
-            console.log('Removed video track from connection');
-          } catch(e) {
-            console.error('Error removing track:', e);
-          }
-        }
+    // Recreate connections with audio only
+    Object.entries(mediaConnections).forEach(([peerId, oldCall]) => {
+      console.log('Restoring audio-only for peer:', peerId);
+      
+      // Close old call
+      oldCall.close();
+      
+      // Create new call with audio only
+      const newCall = myPeer.call(peerId, localStream, {
+        metadata: { nick: myNick, hasVideo: false }
+      });
+      
+      mediaConnections[peerId] = newCall;
+      
+      // Setup handlers for new call
+      newCall.on('stream', (remoteStream) => {
+        console.log('Received audio stream after stopping screen share');
+      });
+      
+      newCall.on('close', () => {
+        removeParticipant(peerId);
       });
     });
     
