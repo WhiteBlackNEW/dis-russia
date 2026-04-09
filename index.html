@@ -516,9 +516,9 @@ async function joinRoom() {
 
   setLog('— подключаемся к серверу —');
 
-  // Host peer ID = "void--ROOM" (stable, known ID)
+  // Host peer ID = "void-ROOM" (stable, known ID)
   // We try to claim it first; if taken, we are the guest
-  const hostPeerId = 'void--' + room;
+  const hostPeerId = 'void-' + room;
 
   // Try to connect as host
   tryAsHost(hostPeerId);
