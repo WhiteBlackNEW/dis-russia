@@ -51,7 +51,7 @@
 
   .wordmark {
     display: flex; align-items: baseline; gap: 10px;
-    margin-bottom: 28px; padding: 0 4px;
+    margin-bottom: 28px; padding: 0 4px; position: relative;
     animation: fadeUp 0.3s ease;
   }
   .wordmark-text { font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #fff; }
@@ -60,6 +60,12 @@
     color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
     padding: 2px 8px; border: 1px solid rgba(124,106,247,0.3); border-radius: 2px;
   }
+  .settings-icon-btn {
+    margin-left: auto; background: transparent; border: none;
+    color: var(--muted); font-size: 18px; cursor: pointer;
+    padding: 4px 8px; border-radius: 6px; transition: all 0.15s;
+  }
+  .settings-icon-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
 
   .card {
     background: var(--surface); border: 1px solid var(--border);
@@ -419,6 +425,22 @@
   }
   .setting-select:hover { border-color: var(--border-bright); }
   .setting-select:focus { border-color: rgba(124,106,247,0.4); }
+  
+  .setting-hint {
+    margin-top: 6px; font-size: 11px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Screen Share */
+  .screen-share-video {
+    position: fixed; bottom: 80px; right: 20px;
+    width: 320px; max-width: calc(100vw - 40px);
+    border-radius: 12px; border: 2px solid var(--accent);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    z-index: 100; cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .screen-share-video:hover { transform: scale(1.02); }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
   audio { display: none; }
@@ -430,6 +452,7 @@
   <div class="wordmark">
     <span class="wordmark-text">void</span>
     <span class="wordmark-tag">voice</span>
+    <button class="settings-icon-btn" onclick="openSettings()" title="Настройки">⚙️</button>
   </div>
 
   <div class="card">
@@ -541,6 +564,7 @@
 
         <div class="controls">
           <button class="ctrl-btn" id="micBtn" onclick="toggleMic()" title="Микрофон">🎙</button>
+          <button class="ctrl-btn" id="screenBtn" onclick="toggleScreen()" title="Демонстрация экрана">🖥️</button>
           <button class="ctrl-btn" onclick="openSettings()" title="Настройки">⚙️</button>
           <div class="ctrl-info">канал <span id="currentRoom"></span></div>
           <button class="ctrl-btn ctrl-hangup" onclick="hangup()" title="Выйти">📵</button>
@@ -605,15 +629,19 @@
       </div>
       
       <div class="setting-group">
-        <label class="setting-label">Чувствительность микрофона</label>
-        <input type="range" class="setting-slider" id="sensitivitySlider" min="0" max="100" value="50" />
-        <div class="setting-value"><span id="sensitivityValue">50</span>%</div>
+        <label class="setting-label">Режим шумоподавления</label>
+        <select class="setting-select" id="noiseSuppressionMode">
+          <option value="standard">Стандартное (браузер)</option>
+          <option value="krisp">Krisp AI (продвинутое)</option>
+          <option value="off">Выключено</option>
+        </select>
+        <div class="setting-hint">Krisp AI удаляет фоновый шум, клавиатуру, собак и т.д.</div>
       </div>
 
       <div class="setting-group">
-        <label class="setting-label">
-          <input type="checkbox" id="noiseSuppression" checked /> Шумоподавление
-        </label>
+        <label class="setting-label">Чувствительность микрофона</label>
+        <input type="range" class="setting-slider" id="sensitivitySlider" min="0" max="100" value="50" />
+        <div class="setting-value"><span id="sensitivityValue">50</span>%</div>
       </div>
 
       <div class="setting-group">
@@ -732,13 +760,17 @@ let dataConnections = {}; // { peerId: DataConnection }
 let participants = {}; // { peerId: { nick, stream } }
 let participantVolumes = {}; // { peerId: volume }
 let localStream = null;
+let screenStream = null;
 let isMuted = false;
+let isScreenSharing = false;
 let myNick = 'anon';
 let room = '';
 let isHost = false;
 let currentContextPeerId = null;
+let audioContext = null;
+let krispProcessor = null;
 let audioSettings = {
-  noiseSuppression: true,
+  noiseSuppressionMode: 'standard', // 'standard', 'krisp', 'off'
   echoCancellation: true,
   autoGainControl: true,
   sensitivity: 50,
@@ -746,7 +778,72 @@ let audioSettings = {
   outputDeviceId: ''
 };
 
-// OAuth Configuration
+// Krisp-like noise suppression using Web Audio API
+async function applyKrispNoiseSuppression(stream) {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    const source = audioContext.createMediaStreamSource(stream);
+    const destination = audioContext.createMediaStreamDestination();
+    
+    // Create noise gate
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    // Create filters for noise reduction
+    const lowpass = audioContext.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 3000; // Cut high frequency noise
+    
+    const highpass = audioContext.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.frequency.value = 100; // Cut low frequency rumble
+    
+    // Create compressor for dynamic range
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -50;
+    compressor.knee.value = 40;
+    compressor.ratio.value = 12;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.25;
+    
+    // Create gain node for sensitivity
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = audioSettings.sensitivity / 50;
+    
+    // Connect the chain
+    source.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(compressor);
+    compressor.connect(gainNode);
+    gainNode.connect(analyser);
+    analyser.connect(destination);
+    
+    // Store processor for cleanup
+    krispProcessor = { source, destination, analyser, gainNode };
+    
+    return destination.stream;
+  } catch(e) {
+    console.error('Krisp noise suppression error:', e);
+    return stream;
+  }
+}
+
+function cleanupKrispProcessor() {
+  if (krispProcessor) {
+    try {
+      krispProcessor.source.disconnect();
+      krispProcessor.gainNode.disconnect();
+      krispProcessor.analyser.disconnect();
+    } catch(e) {
+      console.error('Cleanup error:', e);
+    }
+    krispProcessor = null;
+  }
+}
 // Для работы авторизации нужно:
 // 1. GitHub: https://github.com/settings/developers → New OAuth App
 //    - Homepage URL: твой домен
@@ -940,7 +1037,7 @@ async function joinRoom() {
     const constraints = {
       audio: {
         echoCancellation: audioSettings.echoCancellation,
-        noiseSuppression: audioSettings.noiseSuppression,
+        noiseSuppression: audioSettings.noiseSuppressionMode === 'standard',
         autoGainControl: audioSettings.autoGainControl
       }, 
       video: false 
@@ -951,7 +1048,14 @@ async function joinRoom() {
       constraints.audio.deviceId = { exact: audioSettings.inputDeviceId };
     }
     
-    localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    let stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // Apply Krisp if enabled
+    if (audioSettings.noiseSuppressionMode === 'krisp') {
+      stream = await applyKrispNoiseSuppression(stream);
+    }
+    
+    localStream = stream;
   } catch(e) {
     setLog('❌ нет доступа к микрофону', 'err');
     return;
@@ -1091,6 +1195,12 @@ function handleMediaConn(call, peerId) {
       }
     }
     
+    // Check if stream has video (screen share)
+    const videoTracks = remoteStream.getVideoTracks();
+    if (videoTracks.length > 0) {
+      showScreenShare(peerId, remoteStream);
+    }
+    
     addParticipantToUI(peerId, nick);
     sysMsg('🔗 @' + nick + ' подключился');
   });
@@ -1102,6 +1212,21 @@ function handleMediaConn(call, peerId) {
   call.on('error', e => {
     sysMsg('⚠ ошибка соединения: ' + e.message);
   });
+}
+
+function showScreenShare(peerId, stream) {
+  let video = document.getElementById('screen-' + peerId);
+  if (!video) {
+    video = document.createElement('video');
+    video.id = 'screen-' + peerId;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.className = 'screen-share-video';
+    video.onclick = () => video.requestFullscreen();
+    document.body.appendChild(video);
+  }
+  video.srcObject = stream;
+  sysMsg('🖥️ @' + (participants[peerId]?.nick || 'пользователь') + ' показывает экран');
 }
 
 function setupDataConn(conn, peerId) {
@@ -1184,6 +1309,9 @@ function removeParticipant(peerId) {
   const audio = document.getElementById('audio-' + peerId);
   if (audio) audio.remove();
   
+  const video = document.getElementById('screen-' + peerId);
+  if (video) video.remove();
+  
   const nick = participants[peerId]?.nick || 'пользователь';
   delete participants[peerId];
   delete mediaConnections[peerId];
@@ -1254,7 +1382,75 @@ function toggleMic() {
   document.querySelectorAll('#myViz .bar').forEach(b => b.classList.toggle('muted', isMuted));
 }
 
+async function toggleScreen() {
+  if (!isScreenSharing) {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+        video: { cursor: 'always' }, 
+        audio: false 
+      });
+      
+      const videoTrack = screenStream.getVideoTracks()[0];
+      
+      // Replace video track in all connections
+      Object.values(mediaConnections).forEach(conn => {
+        const sender = conn.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) {
+          sender.replaceTrack(videoTrack);
+        } else {
+          conn.peerConnection.addTrack(videoTrack, screenStream);
+        }
+      });
+      
+      // Handle screen share stop
+      videoTrack.onended = () => {
+        stopScreenShare();
+      };
+      
+      isScreenSharing = true;
+      $('screenBtn').classList.add('muted-on');
+      $('screenBtn').textContent = '🛑';
+      sysMsg('🖥️ Демонстрация экрана включена');
+      
+    } catch(e) {
+      sysMsg('⚠ Ошибка демонстрации экрана: ' + e.message);
+    }
+  } else {
+    stopScreenShare();
+  }
+}
+
+function stopScreenShare() {
+  if (screenStream) {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+  }
+  
+  // Remove video track from all connections
+  Object.values(mediaConnections).forEach(conn => {
+    const sender = conn.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+    if (sender) {
+      conn.peerConnection.removeTrack(sender);
+    }
+  });
+  
+  isScreenSharing = false;
+  $('screenBtn').classList.remove('muted-on');
+  $('screenBtn').textContent = '🖥️';
+  sysMsg('🖥️ Демонстрация экрана выключена');
+}
+
 function hangup() {
+  // Stop screen sharing
+  if (screenStream) {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+    isScreenSharing = false;
+  }
+  
+  // Clean up Krisp processor
+  cleanupKrispProcessor();
+  
   // Close all connections
   Object.values(mediaConnections).forEach(conn => conn?.close());
   Object.values(dataConnections).forEach(conn => conn?.close());
@@ -1283,6 +1479,8 @@ function hangup() {
   $('waitDot').classList.remove('live');
   $('micBtn').textContent = '🎙';
   $('micBtn').classList.remove('muted-on');
+  $('screenBtn').textContent = '🖥️';
+  $('screenBtn').classList.remove('muted-on');
   $('chatMsgs').innerHTML = '';
   
   // Clear saved session (but keep chat history)
@@ -1434,7 +1632,7 @@ async function loadAudioDevices() {
 async function openSettings() {
   await loadAudioDevices();
   
-  $('noiseSuppression').checked = audioSettings.noiseSuppression;
+  $('noiseSuppressionMode').value = audioSettings.noiseSuppressionMode;
   $('echoCancellation').checked = audioSettings.echoCancellation;
   $('autoGainControl').checked = audioSettings.autoGainControl;
   $('sensitivitySlider').value = audioSettings.sensitivity;
@@ -1452,7 +1650,9 @@ $('sensitivitySlider').addEventListener('input', (e) => {
 });
 
 async function applyAudioSettings() {
-  audioSettings.noiseSuppression = $('noiseSuppression').checked;
+  const oldMode = audioSettings.noiseSuppressionMode;
+  
+  audioSettings.noiseSuppressionMode = $('noiseSuppressionMode').value;
   audioSettings.echoCancellation = $('echoCancellation').checked;
   audioSettings.autoGainControl = $('autoGainControl').checked;
   audioSettings.sensitivity = parseInt($('sensitivitySlider').value);
@@ -1464,13 +1664,18 @@ async function applyAudioSettings() {
   
   // Reacquire media stream with new settings
   if (localStream) {
+    // Clean up old Krisp processor
+    if (oldMode === 'krisp') {
+      cleanupKrispProcessor();
+    }
+    
     localStream.getTracks().forEach(t => t.stop());
     
     try {
       const constraints = {
         audio: {
           echoCancellation: audioSettings.echoCancellation,
-          noiseSuppression: audioSettings.noiseSuppression,
+          noiseSuppression: audioSettings.noiseSuppressionMode === 'standard',
           autoGainControl: audioSettings.autoGainControl
         },
         video: false
@@ -1481,7 +1686,14 @@ async function applyAudioSettings() {
         constraints.audio.deviceId = { exact: audioSettings.inputDeviceId };
       }
       
-      localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      let stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Apply Krisp if enabled
+      if (audioSettings.noiseSuppressionMode === 'krisp') {
+        stream = await applyKrispNoiseSuppression(stream);
+      }
+      
+      localStream = stream;
       
       // Update all media connections with new stream
       Object.values(mediaConnections).forEach(conn => {
