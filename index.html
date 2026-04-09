@@ -443,13 +443,18 @@
   - Чат: через PeerJS DataConnection
 */
 
-// Try multiple servers in fallback order
+// Multiple PeerJS servers with fallback
 const PEER_SERVERS = [
-  { host: 'peerjs-server.fly.dev', port: 443, path: '/myapp', secure: true },
-  { host: '0.peerjs.com', port: 443, path: '/', secure: true }
+  // Public servers that may work in Russia
+  { host: 'peerjs.92k.de', port: 443, path: '/', secure: true },
+  { host: 'peerjs-server.herokuapp.com', port: 443, path: '/', secure: true },
+  { host: 'peerjs-server.onrender.com', port: 443, path: '/', secure: true },
+  { host: '0.peerjs.com', port: 443, path: '/', secure: true },
+  { host: 'peerjs-server.fly.dev', port: 443, path: '/myapp', secure: true }
 ];
 
 let currentServerIndex = 0;
+let serverTestResults = [];
 
 function getPeerConfig() {
   return {
@@ -458,16 +463,67 @@ function getPeerConfig() {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun.services.mozilla.com:3478' },
         { urls: 'stun:openrelay.metered.ca:80' },
         { 
           urls: 'turn:openrelay.metered.ca:80',
           username: 'openrelayproject',
           credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
         }
       ]
     },
-    debug: 1
+    debug: 0
   };
+}
+
+// Test server connectivity
+async function testServer(serverConfig) {
+  return new Promise((resolve) => {
+    const ws = new WebSocket(`${serverConfig.secure ? 'wss' : 'ws'}://${serverConfig.host}:${serverConfig.port}${serverConfig.path}peerjs?key=peerjs&id=test-${Date.now()}&token=test&version=1.5.4`);
+    
+    const timeout = setTimeout(() => {
+      ws.close();
+      resolve(false);
+    }, 3000);
+    
+    ws.onopen = () => {
+      clearTimeout(timeout);
+      ws.close();
+      resolve(true);
+    };
+    
+    ws.onerror = () => {
+      clearTimeout(timeout);
+      resolve(false);
+    };
+  });
+}
+
+// Find working server
+async function findWorkingServer() {
+  setLog('🔍 Ищем рабочий сервер...', '');
+  
+  for (let i = 0; i < PEER_SERVERS.length; i++) {
+    const server = PEER_SERVERS[i];
+    setLog(`🔍 Проверяем ${server.host}...`, '');
+    
+    const works = await testServer(server);
+    serverTestResults.push({ index: i, host: server.host, works });
+    
+    if (works) {
+      currentServerIndex = i;
+      setLog(`✓ Найден рабочий сервер: ${server.host}`, 'ok');
+      return true;
+    }
+  }
+  
+  setLog('❌ Все серверы недоступны. Нужен VPN или свой сервер.', 'err');
+  return false;
 }
 
 let myPeer = null;
@@ -540,10 +596,15 @@ async function joinRoom() {
     return;
   }
 
+  // Test servers first
+  const serverFound = await findWorkingServer();
+  if (!serverFound) {
+    return;
+  }
+
   setLog('— подключаемся к серверу —');
 
   // Host peer ID = "void-ROOM" (stable, known ID)
-  // We try to claim it first; if taken, we are the guest
   const hostPeerId = 'void-' + room;
 
   // Try to connect as host
@@ -580,22 +641,12 @@ function tryAsHost(hostPeerId, serverRetry = false) {
       // Host slot taken — we are the guest
       myPeer.destroy();
       joinAsGuest(hostPeerId);
-    } else if ((err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') && !serverRetry && currentServerIndex < PEER_SERVERS.length - 1) {
-      // Try next server
-      currentServerIndex++;
-      setLog('⚠ Пробуем другой сервер...', 'err');
-      myPeer.destroy();
-      setTimeout(() => tryAsHost(hostPeerId, true), 1000);
     } else if (err.type === 'network') {
       setLog('❌ Проблема с сетью. Проверь интернет.', 'err');
-    } else if (err.type === 'server-error') {
-      setLog('❌ Сервер недоступен. Попробуй через минуту.', 'err');
-    } else if (err.type === 'socket-error') {
-      setLog('❌ Ошибка подключения. Перезагрузи страницу.', 'err');
-    } else if (err.type === 'socket-closed') {
-      setLog('❌ Соединение разорвано. Попробуй снова.', 'err');
+    } else if (err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
+      setLog('❌ Сервер недоступен. Попробуй перезагрузить страницу.', 'err');
     } else {
-      setLog('❌ Ошибка: ' + err.type + ' - ' + err.message, 'err');
+      setLog('❌ Ошибка: ' + err.type, 'err');
     }
   });
 }
@@ -640,22 +691,12 @@ function joinAsGuest(hostPeerId, retryCount = 0) {
       setTimeout(() => joinAsGuest(hostPeerId, retryCount + 1), 1500);
     } else if (err.type === 'peer-unavailable') {
       setLog('❌ Хост недоступен. Попробуй создать новую комнату.', 'err');
-    } else if ((err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') && currentServerIndex < PEER_SERVERS.length - 1) {
-      // Try next server
-      currentServerIndex++;
-      setLog('⚠ Пробуем другой сервер...', 'err');
-      myPeer.destroy();
-      setTimeout(() => joinAsGuest(hostPeerId, 0), 1000);
     } else if (err.type === 'network') {
       setLog('❌ Проблема с сетью. Проверь интернет.', 'err');
-    } else if (err.type === 'server-error') {
-      setLog('❌ Сервер недоступен. Попробуй через минуту.', 'err');
-    } else if (err.type === 'socket-error') {
-      setLog('❌ Ошибка подключения. Перезагрузи страницу.', 'err');
-    } else if (err.type === 'socket-closed') {
-      setLog('❌ Соединение разорвано. Попробуй снова.', 'err');
+    } else if (err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
+      setLog('❌ Сервер недоступен. Попробуй перезагрузить страницу.', 'err');
     } else {
-      setLog('❌ Ошибка: ' + err.type + ' - ' + err.message, 'err');
+      setLog('❌ Ошибка: ' + err.type, 'err');
     }
   });
 }
