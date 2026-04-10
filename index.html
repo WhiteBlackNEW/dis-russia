@@ -1232,6 +1232,48 @@ video.remote-screen { display: block; }
       <div class="modal-section-label">Качество</div>
       <div class="modal-quality-row">
         <div class="quality-btn" id="qBtnAuto" onclick="selectQuality('auto')">
+          <span class="quality-btn-label">Авто</span>
+          <span class="quality-btn-sub">720–1080p</span>
+        </div>
+        <div class="quality-btn selected" id="qBtn720" onclick="selectQuality('720')">
+          <span class="quality-btn-label">720p</span>
+          <span class="quality-btn-sub">30 fps</span>
+        </div>
+        <div class="quality-btn" id="qBtn1080" onclick="selectQuality('1080')">
+          <span class="quality-btn-label">1080p</span>
+          <span class="quality-btn-sub">30 fps</span>
+        </div>
+        <div class="quality-btn" id="qBtnLow" onclick="selectQuality('low')">
+          <span class="quality-btn-label">Низкое</span>
+          <span class="quality-btn-sub">480p</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-note">Браузер спросит разрешение на захват</div>
+      <button class="modal-cancel-btn" onclick="closeShareModal()">Отмена</button>
+      <button class="modal-confirm-btn" onclick="startScreenShare()">Начать трансляцию</button>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+var ADMIN_NICK = 'whiteblack';
+
+function getAccounts() { return JSON.parse(localStorage.getItem('void_accounts') || '{}'); }
+function saveAccounts(obj) { localStorage.setItem('void_accounts', JSON.stringify(obj)); }
+function getCurrentUser() { return localStorage.getItem('void_current') || null; }
+function setCurrentUser(nick) { localStorage.setItem('void_current', nick); }
+function getUserData(nick) { return getAccounts()[nick] || null; }
+function saveUserData(nick, data) {
+  var all = getAccounts();
+  all[nick] = Object.assign({}, all[nick] || {}, data);
+  saveAccounts(all);
+}
 
 function hashPass(s) {
   let h = 0;
@@ -2109,18 +2151,20 @@ function esc(s) {
 // ============================================================
 //  STARTUP
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('roomInput')?.addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
-  document.getElementById('chatIn')?.addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
-  document.getElementById('dmInput')?.addEventListener('keydown', e => { if(e.key==='Enter') sendDM(); });
-  document.getElementById('friendAddInput')?.addEventListener('keydown', e => { if(e.key==='Enter') sendFriendRequest(); });
+window.addEventListener('load', function() {
+  document.getElementById('roomInput').addEventListener('keydown', function(e){ if(e.key==='Enter') joinRoom(); });
+  document.getElementById('chatIn').addEventListener('keydown', function(e){ if(e.key==='Enter') sendChat(); });
+  document.getElementById('dmInput').addEventListener('keydown', function(e){ if(e.key==='Enter') sendDM(); });
+  document.getElementById('friendAddInput').addEventListener('keydown', function(e){ if(e.key==='Enter') sendFriendRequest(); });
+  document.getElementById('loginPass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  document.getElementById('regPass2').addEventListener('keydown', function(e){ if(e.key==='Enter') doRegister(); });
 
   renderSavedAccounts();
-  const saved = getCurrentUser();
+  var saved = getCurrentUser();
   if (saved && getUserData(saved)) loginAs(saved);
 
-  const hash = decodeURIComponent(location.hash.slice(1));
-  if (hash) { const ri = document.getElementById('roomInput'); if(ri) ri.value = hash; }
+  var hash = decodeURIComponent(location.hash.slice(1));
+  if (hash) document.getElementById('roomInput').value = hash;
 });
 </script>
 </body>
