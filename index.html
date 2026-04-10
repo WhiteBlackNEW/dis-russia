@@ -766,6 +766,46 @@ body::before {
 }
 .btn-copy:hover { background: rgba(124,106,247,0.22); }
 
+/* Admin panel */
+.admin-user-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+  animation: fadeUp 0.2s ease;
+}
+.admin-user-av {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(58,58,80,0.6); color: var(--muted);
+  border: 1px solid var(--muted2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+}
+.admin-user-av.online { background: rgba(79,200,168,0.12); color: var(--accent2); border-color: rgba(79,200,168,0.3); }
+.admin-user-info { flex: 1; min-width: 0; }
+.admin-user-name { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.admin-crown { font-size: 11px; color: var(--accent); font-family: 'Space Mono', monospace; }
+.admin-user-meta { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.admin-online { color: var(--accent2); }
+.admin-offline { color: var(--muted2); }
+.admin-user-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.admin-btn-del {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid rgba(247,106,138,0.3); background: rgba(247,106,138,0.08);
+  color: var(--accent3); font-family: 'Space Mono', monospace; font-size: 10px;
+  cursor: pointer; transition: all 0.15s;
+}
+.admin-btn-del:hover { background: rgba(247,106,138,0.2); }
+.admin-btn-kick {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid rgba(124,106,247,0.3); background: rgba(124,106,247,0.08);
+  color: var(--accent); font-family: 'Space Mono', monospace; font-size: 10px;
+  cursor: pointer; transition: all 0.15s;
+}
+.admin-btn-kick:hover { background: rgba(124,106,247,0.2); }
+
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -894,6 +934,11 @@ video.remote-screen { display: block; }
           <div class="sidebar-user-name" id="sidebarMyName">—</div>
           <div class="sidebar-user-tag">онлайн</div>
         </div>
+        <button class="sidebar-logout" id="adminBtn" onclick="showView('admin')" title="Админ-панель" style="display:none;color:var(--accent)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1l1.8 3.6L14 5.6l-3 2.9.7 4.1L8 10.5l-3.7 2.1.7-4.1-3-2.9 4.2-.6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>
+        </button>
         <button class="sidebar-logout" onclick="doLogout()" title="Выйти">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1037,12 +1082,7 @@ video.remote-screen { display: block; }
                 </svg>
               </button>
 
-              <!-- Noise suppression toggle -->
-              <button class="vc-btn" id="noiseBtn" onclick="toggleNoise()" title="Шумоподавление">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M2 9h3l2-4 3 8 2-5 2 3h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+
 
               <!-- Screen share -->
               <button class="vc-btn" id="shareBtn" onclick="openSharePicker()" title="Демонстрация экрана">
@@ -1058,8 +1098,7 @@ video.remote-screen { display: block; }
               <div class="vc-info">канал <span id="currentRoom">—</span></div>
               <div class="vc-divider"></div>
 
-              <!-- Noise label -->
-              <div class="vc-noise-label" id="noiseLabel" style="display:none">NR ON</div>
+
 
               <!-- Hangup -->
               <button class="vc-btn vc-hangup" onclick="hangup()" title="Выйти из комнаты">
@@ -1128,11 +1167,17 @@ video.remote-screen { display: block; }
         </div>
       </div>
 
-    </div>
-  </div>
-</div>
-
-<!-- Screen share picker modal -->
+      <!-- Admin view -->
+      <div id="adminView" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+        <div class="friends-header">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 2l2.2 4.5L17 7.6l-3.5 3.4.8 4.9L10 13.5l-4.3 2.4.8-4.9L3 7.6l4.8-.7z" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          <span class="friends-header-title">Админ-панель</span>
+          <button onclick="showView('idle')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;font-family:'Space Mono',monospace">← назад</button>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px 20px;" id="adminPanel"></div>
+      </div>
 <div class="modal-overlay hidden" id="shareModal">
   <div class="modal">
     <div class="modal-header">
@@ -1187,54 +1232,6 @@ video.remote-screen { display: block; }
       <div class="modal-section-label">Качество</div>
       <div class="modal-quality-row">
         <div class="quality-btn" id="qBtnAuto" onclick="selectQuality('auto')">
-          <span class="quality-btn-label">Авто</span>
-          <span class="quality-btn-sub">720p — 1080p</span>
-        </div>
-        <div class="quality-btn selected" id="qBtn720" onclick="selectQuality('720')">
-          <span class="quality-btn-label">720p</span>
-          <span class="quality-btn-sub">30 fps</span>
-        </div>
-        <div class="quality-btn" id="qBtn1080" onclick="selectQuality('1080')">
-          <span class="quality-btn-label">1080p</span>
-          <span class="quality-btn-sub">30 fps</span>
-        </div>
-        <div class="quality-btn" id="qBtnLow" onclick="selectQuality('low')">
-          <span class="quality-btn-label">Низкое</span>
-          <span class="quality-btn-sub">480p · слабый ПК</span>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <div class="modal-footer-note">Браузер спросит разрешение на захват</div>
-      <button class="modal-cancel-btn" onclick="closeShareModal()">Отмена</button>
-      <button class="modal-confirm-btn" onclick="startScreenShare()">Начать трансляцию</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// ============================================================
-//  STORAGE HELPERS
-// ============================================================
-function getAccounts() { return JSON.parse(localStorage.getItem('void_accounts') || '{}'); }
-function saveAccounts(obj) { localStorage.setItem('void_accounts', JSON.stringify(obj)); }
-function getCurrentUser() { return localStorage.getItem('void_current') || null; }
-function setCurrentUser(nick) { localStorage.setItem('void_current', nick); }
-function getUserData(nick) { return getAccounts()[nick] || null; }
-function saveUserData(nick, data) {
-  const all = getAccounts();
-  all[nick] = { ...all[nick], ...data };
-  saveAccounts(all);
-}
-
-// nick → safe PeerJS ID: only a-z0-9 and single hyphens allowed
-// We prefix with "voidu-" for user peers, "voidr-" for room hosts
-function nickToPeerId(nick) {
-  return 'voidu-' + nick.toLowerCase().replace(/[^a-z0-9]/g, '0');
-}
-function roomToPeerId(room) {
-  return 'voidr-' + room.toLowerCase().replace(/[^a-z0-9]/g, '0').substring(0, 20);
-}
 
 function hashPass(s) {
   let h = 0;
@@ -1242,67 +1239,67 @@ function hashPass(s) {
   return h.toString(36);
 }
 
+function roomToPeerId(room) {
+  // PeerJS: only a-z0-9 and hyphens, no consecutive hyphens, no leading/trailing hyphen
+  return 'voidr' + room.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0, 18);
+}
+
 // ============================================================
-//  FRIENDS DATA  (localStorage — shared on same browser/device)
-//  For cross-device: we deliver via PeerJS user-peer connections
+//  FRIENDS & DM  (localStorage inbox — works cross-accounts on same browser)
 // ============================================================
-function getFriends() {
-  return getUserData(currentUser)?.friends || [];
+function getFriends() { return getUserData(currentUser)?.friends || []; }
+function saveFriends(f) { saveUserData(currentUser, { friends: f }); }
+
+function getDMHistory(nick) { return getUserData(currentUser)?.dmHistory?.[nick] || []; }
+function saveDMHistory(nick, history) {
+  const d = getUserData(currentUser) || {};
+  if (!d.dmHistory) d.dmHistory = {};
+  d.dmHistory[nick] = history.slice(-300);
+  saveUserData(currentUser, { dmHistory: d.dmHistory });
 }
-function saveFriends(friends) {
-  saveUserData(currentUser, { friends });
-}
-function getDMHistory(withNick) {
-  return getUserData(currentUser)?.dmHistory?.[withNick] || [];
-}
-function saveDMHistory(withNick, history) {
-  const data = getUserData(currentUser) || {};
-  if (!data.dmHistory) data.dmHistory = {};
-  data.dmHistory[withNick] = history.slice(-300);
-  saveUserData(currentUser, { dmHistory: data.dmHistory });
-}
-// Write into another user's localStorage slot (works only same browser)
-function deliverToLocalUser(toNick, payload) {
+
+// Deliver message to another user's inbox in localStorage
+function deliverLocal(toNick, payload) {
   const all = getAccounts();
-  if (!all[toNick]) return false; // user not on this device
+  if (!all[toNick]) return false;
   if (!all[toNick].inbox) all[toNick].inbox = [];
   all[toNick].inbox.push({ ...payload, from: currentUser, ts: Date.now() });
   saveAccounts(all);
   return true;
 }
+
 function flushInbox() {
+  if (!currentUser) return;
   const data = getUserData(currentUser);
   const inbox = data?.inbox || [];
   if (!inbox.length) return;
-  // clear inbox
   saveUserData(currentUser, { inbox: [] });
-  inbox.forEach(msg => processInboxMessage(msg));
+  inbox.forEach(handleInboxMsg);
 }
-function processInboxMessage(msg) {
-  if (msg.type === 'friend_request') {
-    const friends = getFriends();
-    if (!friends.find(f => f.nick === msg.from)) {
-      friends.push({ nick: msg.from, status: 'pending_in' });
-      saveFriends(friends);
+
+function handleInboxMsg(msg) {
+  if (msg.type === 'friend_req') {
+    const fr = getFriends();
+    if (!fr.find(f => f.nick === msg.from)) {
+      fr.push({ nick: msg.from, status: 'in' });
+      saveFriends(fr);
     }
   } else if (msg.type === 'friend_accept') {
-    const friends = getFriends();
-    const entry = friends.find(f => f.nick === msg.from);
-    if (entry && entry.status === 'pending_out') {
-      entry.status = 'friend';
-      saveFriends(friends);
-    }
+    const fr = getFriends();
+    const e = fr.find(f => f.nick === msg.from);
+    if (e) { e.status = 'friend'; saveFriends(fr); }
   } else if (msg.type === 'friend_decline') {
-    saveFriends(getFriends().filter(f => !(f.nick === msg.from && f.status === 'pending_out')));
+    saveFriends(getFriends().filter(f => f.nick !== msg.from));
   } else if (msg.type === 'dm') {
-    const history = getDMHistory(msg.from);
-    history.push({ mine: false, text: msg.text, ts: msg.ts || Date.now() });
-    saveDMHistory(msg.from, history);
+    const h = getDMHistory(msg.from);
+    h.push({ mine: false, text: msg.text, ts: msg.ts });
+    saveDMHistory(msg.from, h);
+    if (currentView === 'dm' && currentDMNick === msg.from) appendDMMsg(msg.from, msg.text, 'theirs');
+    else renderSidebarDMs(); // show unread dot
   }
   renderPendingBadge();
-  renderSidebarDMs();
   if (currentView === 'friends') renderFriendsList(friendsTab);
-  if (currentView === 'dm' && currentDMNick === msg.from) openDM(msg.from);
+  renderSidebarDMs();
 }
 
 // ============================================================
@@ -1317,30 +1314,28 @@ function switchAuthTab(tab) {
   document.getElementById('tabReg').classList.toggle('active', tab === 'reg');
   setAuthLog('');
 }
-
 function setAuthLog(msg, cls='') {
   const el = document.getElementById('authLog');
   el.textContent = msg; el.className = 'auth-log ' + cls;
 }
 
 function doRegister() {
-  const nick = document.getElementById('regNick').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  const nick = document.getElementById('regNick').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
   const pass = document.getElementById('regPass').value;
   const pass2 = document.getElementById('regPass2').value;
-  if (!nick) { setAuthLog('⚠ введи ник', 'err'); return; }
-  if (nick.length < 3) { setAuthLog('⚠ ник слишком короткий', 'err'); return; }
+  if (!nick || nick.length < 2) { setAuthLog('⚠ ник минимум 2 символа (a-z 0-9 _)', 'err'); return; }
   if (!pass || pass.length < 4) { setAuthLog('⚠ пароль минимум 4 символа', 'err'); return; }
   if (pass !== pass2) { setAuthLog('⚠ пароли не совпадают', 'err'); return; }
   const accounts = getAccounts();
-  if (accounts[nick]) { setAuthLog('⚠ ник уже занят', 'err'); return; }
-  accounts[nick] = { passHash: hashPass(pass), friends: [], dmHistory: {} };
+  if (accounts[nick]) { setAuthLog('⚠ ник занят', 'err'); return; }
+  accounts[nick] = { passHash: hashPass(pass), friends: [], dmHistory: {}, inbox: [], createdAt: Date.now() };
   saveAccounts(accounts);
-  setAuthLog('✓ аккаунт создан, входим...', 'ok');
-  setTimeout(() => loginAs(nick), 600);
+  setAuthLog('✓ аккаунт создан!', 'ok');
+  setTimeout(() => loginAs(nick), 500);
 }
 
 function doLogin() {
-  const nick = document.getElementById('loginNick').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  const nick = document.getElementById('loginNick').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
   const pass = document.getElementById('loginPass').value;
   if (!nick || !pass) { setAuthLog('⚠ заполни все поля', 'err'); return; }
   const accounts = getAccounts();
@@ -1354,15 +1349,13 @@ function loginAs(nick) {
   currentUser = nick;
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'flex';
-  document.getElementById('appScreen').classList.add('show');
   initApp();
 }
 
 function doLogout() {
   localStorage.removeItem('void_current');
-  currentUser = null;
   hangup();
-  if (userPeer) { try { userPeer.destroy(); } catch(e){} userPeer = null; }
+  currentUser = null;
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('loginNick').value = '';
@@ -1376,21 +1369,16 @@ function renderSavedAccounts() {
   const nicks = Object.keys(accounts);
   const block = document.getElementById('savedAccountsBlock');
   const list = document.getElementById('savedAccountsList');
-  if (nicks.length === 0) { block.classList.remove('show'); return; }
+  if (!nicks.length) { block.classList.remove('show'); return; }
   block.classList.add('show');
   list.innerHTML = '';
   nicks.forEach(nick => {
     const div = document.createElement('div');
     div.className = 'saved-account';
-    div.onclick = () => {
-      document.getElementById('loginNick').value = nick;
-      switchAuthTab('login');
-      document.getElementById('loginPass').focus();
-    };
-    div.innerHTML = `
-      <div class="saved-av">${nick.slice(0,2).toUpperCase()}</div>
+    div.onclick = () => { document.getElementById('loginNick').value = nick; switchAuthTab('login'); document.getElementById('loginPass').focus(); };
+    div.innerHTML = `<div class="saved-av">${nick.slice(0,2).toUpperCase()}</div>
       <div class="saved-name">${esc(nick)}</div>
-      <div class="saved-tag">нажми чтобы войти</div>`;
+      <div class="saved-tag">${nick === ADMIN_NICK ? '👑 admin' : 'нажми для входа'}</div>`;
     list.appendChild(div);
   });
 }
@@ -1398,8 +1386,6 @@ function renderSavedAccounts() {
 // ============================================================
 //  APP INIT
 // ============================================================
-let userPeer = null; // permanent peer for friends/DM
-
 function initApp() {
   myNick = currentUser;
   document.getElementById('sidebarMyAv').textContent = myNick.slice(0,2).toUpperCase();
@@ -1407,78 +1393,46 @@ function initApp() {
   document.getElementById('myTileAv').textContent = myNick.slice(0,2).toUpperCase();
   document.getElementById('myTileName').textContent = myNick;
 
-  // Flush any inbox messages that arrived while offline
+  // Admin badge in sidebar
+  if (myNick === ADMIN_NICK) {
+    document.getElementById('sidebarMyName').innerHTML = '@' + myNick + ' <span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace;">ADMIN</span>';
+  }
+
   flushInbox();
+  setInterval(flushInbox, 2000);
+  markOnline();
+  setInterval(markOnline, 15000);
+  setInterval(renderSidebarDMs, 8000);
 
   renderSidebarDMs();
   renderPendingBadge();
 
-  // Start permanent user peer for real-time delivery
-  startUserPeer();
-
-  markOnline();
-  setInterval(markOnline, 20000);
-  setInterval(flushInbox, 3000); // also poll localStorage inbox
+  // Show admin button if admin
+  if (myNick === ADMIN_NICK) {
+    let adminBtn = document.getElementById('adminSidebarBtn');
+    if (!adminBtn) {
+      adminBtn = document.createElement('div');
+      adminBtn.id = 'adminSidebarBtn';
+      adminBtn.className = 'sidebar-item';
+      adminBtn.onclick = () => showView('admin');
+      adminBtn.innerHTML = `<div class="sidebar-item-icon" style="background:rgba(247,194,106,0.12)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 3 3.5.5-2.5 2.5.5 3.5L7 9l-3 1.5.5-3.5L2 4.5l3.5-.5z" stroke="#f7c26a" stroke-width="1.2" fill="none"/></svg>
+      </div>
+      <span class="sidebar-item-name" style="color:#f7c26a">Админ панель</span>`;
+      document.getElementById('sidebarRooms').parentNode.insertBefore(adminBtn, document.getElementById('sidebarRooms').parentNode.querySelector('.sidebar-user'));
+    }
+  }
 
   showView('idle');
 }
 
-function startUserPeer() {
-  if (userPeer) { try { userPeer.destroy(); } catch(e){} }
-  const peerId = nickToPeerId(currentUser);
-  userPeer = new Peer(peerId, PEER_CONFIG);
-  userPeer.on('open', () => {
-    console.log('[userPeer] online as', peerId);
-  });
-  userPeer.on('connection', conn => {
-    conn.on('data', data => {
-      if (data && data.voidMsg) processRealtimeMsg(data);
-    });
-  });
-  userPeer.on('error', err => {
-    // ID taken = someone else with same nick online (or stale). Retry with suffix
-    if (err.type === 'unavailable-id') {
-      console.warn('[userPeer] ID taken, retrying...');
-      setTimeout(startUserPeer, 3000);
-    }
-  });
-}
-
-// Deliver a message to another user via their user-peer (real-time)
-// Falls back to localStorage inbox
-function deliverMsg(toNick, payload) {
-  // Try local inbox first (same browser, instant)
-  const localOk = deliverToLocalUser(toNick, payload);
-
-  // Also try PeerJS real-time if they're online
-  try {
-    const theirPeerId = nickToPeerId(toNick);
-    const conn = (userPeer || new Peer(PEER_CONFIG)).connect(theirPeerId, { reliable: true });
-    conn.on('open', () => {
-      conn.send({ voidMsg: true, ...payload, from: currentUser });
-      setTimeout(() => conn.close(), 1000);
-    });
-    conn.on('error', () => {}); // silent fail, inbox covers it
-  } catch(e) {}
-}
-
-function processRealtimeMsg(msg) {
-  processInboxMessage(msg);
-}
-
 function markOnline() {
   if (!currentUser) return;
-  const all = getAccounts();
-  if (all[currentUser]) {
-    all[currentUser].lastSeen = Date.now();
-    saveAccounts(all);
-  }
+  saveUserData(currentUser, { lastSeen: Date.now() });
 }
-
 function isOnline(nick) {
-  const data = getUserData(nick);
-  if (!data) return false;
-  return data.lastSeen && (Date.now() - data.lastSeen) < 45000;
+  const d = getUserData(nick);
+  return d?.lastSeen && (Date.now() - d.lastSeen) < 40000;
 }
 
 // ============================================================
@@ -1488,13 +1442,11 @@ let currentView = '';
 let currentDMNick = '';
 
 function showView(view, extra) {
-  ['idleView','voiceView','friendsView','dmView'].forEach(v => {
+  // Add admin view to list
+  ['idleView','voiceView','friendsView','dmView','adminView'].forEach(v => {
     const el = document.getElementById(v);
-    el.style.display = 'none';
-    el.style.flex = '';
+    if (el) { el.style.display = 'none'; el.style.flex = ''; }
   });
-
-  // sidebar active
   document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
 
   if (view === 'idle') {
@@ -1510,42 +1462,37 @@ function showView(view, extra) {
     el.style.display = 'flex'; el.style.flex = '1';
     currentView = 'friends';
     renderFriendsList('online');
-    // activate sidebar item
-    document.querySelectorAll('.sidebar-item')[1]?.classList.add('active');
   } else if (view === 'dm') {
     const el = document.getElementById('dmView');
     el.style.display = 'flex'; el.style.flex = '1';
     currentDMNick = extra;
     currentView = 'dm';
     openDM(extra);
+  } else if (view === 'admin') {
+    const el = document.getElementById('adminView');
+    if (el) { el.style.display = 'flex'; el.style.flex = '1'; }
+    currentView = 'admin';
+    renderAdminPanel();
+    document.getElementById('adminSidebarBtn')?.classList.add('active');
   }
 }
 
 // ============================================================
-//  FRIENDS SYSTEM
+//  FRIENDS
 // ============================================================
 let friendsTab = 'online';
 
 function switchFriendsTab(tab) {
   friendsTab = tab;
   ['online','all','pending'].forEach(t => {
-    document.getElementById('ft' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+    document.getElementById('ft' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.toggle('active', t === tab);
   });
   renderFriendsList(tab);
 }
 
-function getFriends() {
-  const data = getUserData(currentUser);
-  return data?.friends || [];
-}
-
-function saveFriends(friends) {
-  saveUserData(currentUser, { friends });
-}
-
 function sendFriendRequest() {
   const input = document.getElementById('friendAddInput');
-  const target = input.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  const target = input.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
   const setLog = (msg, cls='') => {
     const el = document.getElementById('friendAddLog');
     el.textContent = msg; el.className = 'friends-add-log ' + cls;
@@ -1555,36 +1502,36 @@ function sendFriendRequest() {
   if (target === currentUser) { setLog('⚠ нельзя добавить себя', 'err'); return; }
 
   const accounts = getAccounts();
-  if (!accounts[target]) { setLog('⚠ пользователь @' + target + ' не найден — они должны зарегистрироваться на этом сайте', 'err'); return; }
-
-  const myFriends = getFriends();
-  const existing = myFriends.find(f => f.nick === target);
-  if (existing?.status === 'friend') { setLog('⚠ уже в списке друзей', 'err'); return; }
-  if (existing?.status === 'pending_out') { setLog('⚠ заявка уже отправлена', 'err'); return; }
-  if (existing?.status === 'pending_in') {
-    // They already sent us one — just accept
-    acceptFriend(target);
-    setLog('✓ взаимная заявка — теперь вы друзья!', 'ok');
+  if (!accounts[target]) {
+    setLog('⚠ @' + target + ' не найден — пользователь должен зарегистрироваться на этом же сайте и в том же браузере', 'err');
     return;
   }
 
-  myFriends.push({ nick: target, status: 'pending_out' });
-  saveFriends(myFriends);
+  const fr = getFriends();
+  const ex = fr.find(f => f.nick === target);
+  if (ex?.status === 'friend') { setLog('⚠ уже друзья', 'err'); return; }
+  if (ex?.status === 'out') { setLog('⚠ заявка уже отправлена', 'err'); return; }
+  if (ex?.status === 'in') {
+    acceptFriend(target);
+    setLog('✓ взаимная заявка — теперь вы друзья!', 'ok');
+    input.value = '';
+    return;
+  }
 
-  // Deliver to target
-  deliverMsg(target, { type: 'friend_request' });
-
+  fr.push({ nick: target, status: 'out' });
+  saveFriends(fr);
+  deliverLocal(target, { type: 'friend_req' });
   input.value = '';
   setLog('✓ заявка отправлена @' + target, 'ok');
   renderFriendsList(friendsTab);
 }
 
 function acceptFriend(nick) {
-  const myFriends = getFriends();
-  const entry = myFriends.find(f => f.nick === nick);
-  if (entry) entry.status = 'friend';
-  saveFriends(myFriends);
-  deliverMsg(nick, { type: 'friend_accept' });
+  const fr = getFriends();
+  const e = fr.find(f => f.nick === nick);
+  if (e) e.status = 'friend';
+  saveFriends(fr);
+  deliverLocal(nick, { type: 'friend_accept' });
   renderFriendsList(friendsTab);
   renderSidebarDMs();
   renderPendingBadge();
@@ -1592,71 +1539,67 @@ function acceptFriend(nick) {
 
 function declineFriend(nick) {
   saveFriends(getFriends().filter(f => f.nick !== nick));
-  deliverMsg(nick, { type: 'friend_decline' });
+  deliverLocal(nick, { type: 'friend_decline' });
   renderFriendsList(friendsTab);
   renderPendingBadge();
 }
 
 function removeFriend(nick) {
-  let myFriends = getFriends().filter(f => f.nick !== nick);
-  saveFriends(myFriends);
+  saveFriends(getFriends().filter(f => f.nick !== nick));
   renderFriendsList(friendsTab);
   renderSidebarDMs();
 }
 
 function renderPendingBadge() {
-  const pending = getFriends().filter(f => f.status === 'pending_in').length;
-  const badge = document.getElementById('pendingBadge');
-  const ftBadge = document.getElementById('ftPendingBadge');
-  if (pending > 0) {
-    badge.style.display = ''; badge.textContent = pending;
-    ftBadge.style.display = ''; ftBadge.textContent = pending;
-  } else {
-    badge.style.display = 'none';
-    ftBadge.style.display = 'none';
-  }
+  const n = getFriends().filter(f => f.status === 'in').length;
+  ['pendingBadge','ftPendingBadge'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = n > 0 ? '' : 'none';
+    el.textContent = n;
+  });
 }
 
 function renderFriendsList(tab) {
   const list = document.getElementById('friendsList');
+  if (!list) return;
   list.innerHTML = '';
-  const friends = getFriends();
+  const fr = getFriends();
+  let items = tab === 'online' ? fr.filter(f => f.status === 'friend' && isOnline(f.nick))
+            : tab === 'all'    ? fr.filter(f => f.status === 'friend')
+            : fr.filter(f => f.status === 'in' || f.status === 'out');
 
-  let items = [];
-  if (tab === 'online') items = friends.filter(f => f.status === 'friend' && isOnline(f.nick));
-  else if (tab === 'all') items = friends.filter(f => f.status === 'friend');
-  else if (tab === 'pending') items = friends.filter(f => f.status === 'pending_in' || f.status === 'pending_out');
-
-  if (items.length === 0) {
+  if (!items.length) {
     list.innerHTML = `<div class="empty-state">
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <circle cx="18" cy="16" r="8" stroke="currentColor" stroke-width="2"/>
-        <path d="M4 42c0-7.7 6.3-14 14-14s14 6.3 14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="36" cy="18" r="6" stroke="currentColor" stroke-width="2"/>
-        <path d="M32 42c0-5.5 3-9 5-10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="18" cy="16" r="7" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M4 40c0-7.7 6.3-14 14-14s14 6.3 14 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="34" cy="18" r="5" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M31 40c0-5 2.5-8.5 5-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
-      <div class="empty-state-text">${tab === 'online' ? 'Никого нет онлайн' : tab === 'pending' ? 'Нет заявок' : 'Нет друзей'}</div>
+      <div class="empty-state-text">${tab==='pending' ? 'нет заявок' : tab==='online' ? 'никого нет онлайн' : 'нет друзей'}</div>
     </div>`;
     return;
   }
 
   items.forEach(f => {
     const online = isOnline(f.nick);
+    const isPending = f.status === 'in' || f.status === 'out';
     const div = document.createElement('div');
     div.className = 'friend-row';
     div.innerHTML = `
-      <div class="friend-av ${f.status === 'pending_in' || f.status === 'pending_out' ? 'pending' : online ? 'online' : 'offline'}">
+      <div class="friend-av ${isPending ? 'pending' : online ? 'online' : 'offline'}">
         ${f.nick.slice(0,2).toUpperCase()}
-        ${f.status === 'friend' ? `<div class="friend-av-status ${online ? 'online' : 'offline'}"></div>` : ''}
+        ${!isPending ? `<div class="friend-av-status ${online ? 'online' : 'offline'}"></div>` : ''}
       </div>
       <div class="friend-info">
         <div class="friend-name">@${esc(f.nick)}</div>
-        <div class="friend-sub">${f.status === 'pending_in' ? 'входящая заявка' : f.status === 'pending_out' ? 'заявка отправлена' : online ? 'онлайн' : 'не в сети'}</div>
+        <div class="friend-sub">${f.status==='in' ? 'входящая заявка' : f.status==='out' ? 'заявка отправлена' : online ? 'онлайн' : 'не в сети'}</div>
       </div>
-      <div class="friend-actions" id="factions_${f.nick}"></div>`;
-    const actions = div.querySelector('.friend-actions');
-    if (f.status === 'pending_in') {
-      actions.innerHTML = `
+      <div class="friend-actions" id="fa_${f.nick}"></div>`;
+    const acts = div.querySelector('.friend-actions');
+    if (f.status === 'in') {
+      acts.innerHTML = `
         <button class="friend-action-btn accept" onclick="acceptFriend('${f.nick}')" title="Принять">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5 6.5-7" stroke="var(--accent2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -1664,7 +1607,7 @@ function renderFriendsList(tab) {
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="var(--accent3)" stroke-width="1.5" stroke-linecap="round"/></svg>
         </button>`;
     } else if (f.status === 'friend') {
-      actions.innerHTML = `
+      acts.innerHTML = `
         <button class="friend-action-btn msg" onclick="showView('dm','${f.nick}')" title="Написать">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3 2V3a1 1 0 011-1z" stroke="var(--accent)" stroke-width="1.2"/></svg>
         </button>
@@ -1678,38 +1621,33 @@ function renderFriendsList(tab) {
 }
 
 // ============================================================
-//  DM CHATS
+//  DM
 // ============================================================
-function getDMHistory(withNick) {
-  const data = getUserData(currentUser);
-  return data?.dmHistory?.[withNick] || [];
-}
-
-function saveDMHistory(withNick, history) {
-  const data = getUserData(currentUser) || {};
-  if (!data.dmHistory) data.dmHistory = {};
-  data.dmHistory[withNick] = history.slice(-200); // keep last 200
-  saveUserData(currentUser, { dmHistory: data.dmHistory });
-}
-
 function openDM(nick) {
   document.getElementById('dmHeaderAv').textContent = nick.slice(0,2).toUpperCase();
   document.getElementById('dmHeaderName').textContent = '@' + nick;
   document.getElementById('dmHeaderStatus').textContent = isOnline(nick) ? 'онлайн' : 'не в сети';
-
   const msgs = document.getElementById('dmMsgs');
   msgs.innerHTML = '';
   const history = getDMHistory(nick);
-  if (history.length === 0) {
-    msgs.innerHTML = `<div style="text-align:center; padding:32px 0; font-family:'Space Mono',monospace; font-size:12px; color:var(--muted);">Начало переписки с @${esc(nick)}</div>`;
+  if (!history.length) {
+    msgs.innerHTML = `<div style="text-align:center;padding:32px;font-family:Space Mono,monospace;font-size:12px;color:var(--muted)">начало переписки с @${esc(nick)}</div>`;
   }
-  history.forEach(m => renderDMMsg(m.mine ? currentUser : nick, m.text, m.mine ? 'mine' : 'theirs'));
-  msgs.scrollTop = msgs.scrollHeight;
+  history.forEach(m => appendDMMsg(m.mine ? currentUser : nick, m.text, m.mine ? 'mine' : 'theirs'));
+  msgs.scrollTop = 99999;
+  document.querySelectorAll('.sidebar-dm-item').forEach(i => i.classList.toggle('active', i.dataset.nick === nick));
+}
 
-  // mark DM sidebar item active
-  document.querySelectorAll('.sidebar-dm-item').forEach(i => {
-    i.classList.toggle('active', i.dataset.nick === nick);
-  });
+function appendDMMsg(nick, text, side) {
+  const msgs = document.getElementById('dmMsgs');
+  const empty = msgs.querySelector('[style*="text-align:center"]');
+  if (empty) empty.remove();
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `<div class="msg-av ${side}">${nick.slice(0,2).toUpperCase()}</div>
+    <div class="msg-body"><div class="msg-nick ${side}">@${esc(nick)}</div><div class="msg-text">${esc(text)}</div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = 99999;
 }
 
 function sendDM() {
@@ -1717,57 +1655,131 @@ function sendDM() {
   const text = input.value.trim();
   if (!text || !currentDMNick) return;
   input.value = '';
-
   const ts = Date.now();
-  const history = getDMHistory(currentDMNick);
-  history.push({ mine: true, text, ts });
-  saveDMHistory(currentDMNick, history);
-
-  // Deliver to friend (localStorage inbox + PeerJS real-time)
-  deliverMsg(currentDMNick, { type: 'dm', text, ts });
-
-  renderDMMsg(currentUser, text, 'mine');
-  document.getElementById('dmMsgs').scrollTop = 9999;
-}
-
-function renderDMMsg(nick, text, side) {
-  const msgs = document.getElementById('dmMsgs');
-  // Remove empty state if exists
-  const empty = msgs.querySelector('[style*="text-align:center"]');
-  if (empty) empty.remove();
-
-  const div = document.createElement('div');
-  div.className = 'msg';
-  const initials = nick.slice(0,2).toUpperCase();
-  div.innerHTML = `<div class="msg-av ${side}">${initials}</div>
-    <div class="msg-body">
-      <div class="msg-nick ${side}">@${esc(nick)}</div>
-      <div class="msg-text">${esc(text)}</div>
-    </div>`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  const h = getDMHistory(currentDMNick);
+  h.push({ mine: true, text, ts });
+  saveDMHistory(currentDMNick, h);
+  deliverLocal(currentDMNick, { type: 'dm', text, ts });
+  appendDMMsg(currentUser, text, 'mine');
 }
 
 function renderSidebarDMs() {
   const container = document.getElementById('sidebarDMs');
+  if (!container) return;
   container.innerHTML = '';
-  const friends = getFriends().filter(f => f.status === 'friend');
-  friends.forEach(f => {
+  getFriends().filter(f => f.status === 'friend').forEach(f => {
     const div = document.createElement('div');
     div.className = 'sidebar-item sidebar-dm-item';
     div.dataset.nick = f.nick;
     div.onclick = () => showView('dm', f.nick);
-    const online = isOnline(f.nick);
+    if (currentView === 'dm' && currentDMNick === f.nick) div.classList.add('active');
     div.innerHTML = `
       <div class="sidebar-item-icon dm">${f.nick.slice(0,2).toUpperCase()}</div>
       <span class="sidebar-item-name">@${esc(f.nick)}</span>
-      <div class="sidebar-online-dot ${online ? 'online' : 'offline'}"></div>`;
+      <div class="sidebar-online-dot ${isOnline(f.nick) ? 'online' : 'offline'}"></div>`;
     container.appendChild(div);
   });
 }
 
 // ============================================================
-//  VOICE CHAT (PeerJS)
+//  ADMIN PANEL
+// ============================================================
+function renderAdminPanel() {
+  const el = document.getElementById('adminView');
+  if (!el || currentUser !== ADMIN_NICK) return;
+  const accounts = getAccounts();
+  const nicks = Object.keys(accounts);
+
+  el.innerHTML = `
+    <div style="flex:1;overflow-y:auto;padding:24px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2l2 4.5 5 .7-3.5 3.5.8 5L11 13l-4.3 2.7.8-5L4 7.2l5-.7z" stroke="#f7c26a" stroke-width="1.4" fill="none"/></svg>
+        <div>
+          <div style="font-weight:800;font-size:18px;">Админ панель</div>
+          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);">void · управление</div>
+        </div>
+        <div style="margin-left:auto;font-family:Space Mono,monospace;font-size:11px;color:var(--accent2);">${nicks.length} аккаунтов</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Всего юзеров</div>
+          <div style="font-size:28px;font-weight:800;color:var(--accent)">${nicks.length}</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Онлайн сейчас</div>
+          <div style="font-size:28px;font-weight:800;color:var(--accent2)">${nicks.filter(n => isOnline(n)).length}</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Заблокированных</div>
+          <div style="font-size:28px;font-weight:800;color:var(--accent3)">${nicks.filter(n => accounts[n]?.banned).length}</div>
+        </div>
+      </div>
+
+      <div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Пользователи</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${nicks.map(nick => {
+          const a = accounts[nick];
+          const online = isOnline(nick);
+          const banned = a?.banned;
+          const isAdm = nick === ADMIN_NICK;
+          const friendCount = (a?.friends||[]).filter(f=>f.status==='friend').length;
+          const created = a?.createdAt ? new Date(a.createdAt).toLocaleDateString('ru') : '—';
+          return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1px solid ${banned?'rgba(247,106,138,0.2)':isAdm?'rgba(247,194,106,0.2)':'var(--border)'};border-radius:10px;${banned?'opacity:0.6':''}">
+            <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Space Mono,monospace;font-size:11px;font-weight:700;flex-shrink:0;background:${isAdm?'rgba(247,194,106,0.15)':banned?'rgba(247,106,138,0.1)':'rgba(124,106,247,0.12)'};color:${isAdm?'#f7c26a':banned?'var(--accent3)':'var(--accent)'};border:1px solid ${isAdm?'rgba(247,194,106,0.3)':banned?'rgba(247,106,138,0.3)':'rgba(124,106,247,0.3)'};">${nick.slice(0,2).toUpperCase()}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;">
+                @${esc(nick)}
+                ${isAdm ? '<span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace;">ADMIN</span>' : ''}
+                ${banned ? '<span style="font-size:9px;color:var(--accent3);background:rgba(247,106,138,0.08);border:1px solid rgba(247,106,138,0.2);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace;">БАН</span>' : ''}
+              </div>
+              <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);margin-top:2px;">
+                ${online ? '<span style="color:var(--accent2)">● онлайн</span>' : '○ оффлайн'} · друзей: ${friendCount} · зарег: ${created}
+              </div>
+            </div>
+            ${!isAdm ? `<div style="display:flex;gap:6px;">
+              <button onclick="adminBan('${nick}')" style="padding:5px 10px;border-radius:6px;border:1px solid ${banned?'rgba(79,200,168,0.3)':'rgba(247,106,138,0.3)'};background:${banned?'rgba(79,200,168,0.08)':'rgba(247,106,138,0.08)'};color:${banned?'var(--accent2)':'var(--accent3)'};font-family:Space Mono,monospace;font-size:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${banned ? 'Разбан' : 'Бан'}</button>
+              <button onclick="adminDelete('${nick}')" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(247,106,138,0.2);background:transparent;color:var(--muted);font-family:Space Mono,monospace;font-size:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='var(--accent3)'" onmouseout="this.style.color='var(--muted)'">Удалить</button>
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Опасная зона</div>
+        <button onclick="adminClearAll()" style="padding:9px 16px;border-radius:8px;border:1px solid rgba(247,106,138,0.3);background:rgba(247,106,138,0.08);color:var(--accent3);font-family:Syne,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">Удалить все аккаунты (кроме своего)</button>
+      </div>
+    </div>`;
+}
+
+function adminBan(nick) {
+  if (nick === ADMIN_NICK) return;
+  const all = getAccounts();
+  if (!all[nick]) return;
+  all[nick].banned = !all[nick].banned;
+  saveAccounts(all);
+  renderAdminPanel();
+}
+function adminDelete(nick) {
+  if (nick === ADMIN_NICK) return;
+  if (!confirm('Удалить аккаунт @' + nick + '?')) return;
+  const all = getAccounts();
+  delete all[nick];
+  saveAccounts(all);
+  renderAdminPanel();
+}
+function adminClearAll() {
+  if (!confirm('Удалить ВСЕ аккаунты кроме своего?')) return;
+  const all = getAccounts();
+  const mine = all[currentUser];
+  const fresh = {};
+  fresh[currentUser] = mine;
+  saveAccounts(fresh);
+  renderAdminPanel();
+}
+
+// ============================================================
+//  VOICE CHAT
 // ============================================================
 const PEER_CONFIG = {
   host: '0.peerjs.com', port: 443, path: '/', secure: true,
@@ -1779,60 +1791,10 @@ const PEER_CONFIG = {
 
 let myPeer = null, mediaConn = null, screenConn = null, dataConn = null;
 let localStream = null, screenStream = null;
-let isMuted = false, noiseEnabled = true, isHost = false;
+let isMuted = false, isHost = false;
 let myNick = '';
 let friendNick = 'друг';
 let room = '';
-
-// Web Audio noise suppression chain
-let audioCtx = null, sourceNode = null, processedDest = null;
-
-function buildNoiseChain(rawStream) {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  sourceNode = audioCtx.createMediaStreamSource(rawStream);
-
-  // Noise gate (dynamics compressor acting as gate)
-  const gate = audioCtx.createDynamicsCompressor();
-  gate.threshold.value = -55;
-  gate.knee.value = 5;
-  gate.ratio.value = 20;
-  gate.attack.value = 0.003;
-  gate.release.value = 0.15;
-
-  // High-pass filter to cut rumble < 80Hz
-  const hpf = audioCtx.createBiquadFilter();
-  hpf.type = 'highpass';
-  hpf.frequency.value = 80;
-  hpf.Q.value = 0.5;
-
-  // Low-pass filter to cut hiss > 8kHz
-  const lpf = audioCtx.createBiquadFilter();
-  lpf.type = 'lowpass';
-  lpf.frequency.value = 8000;
-  lpf.Q.value = 0.7;
-
-  // Compressor for voice leveling
-  const compressor = audioCtx.createDynamicsCompressor();
-  compressor.threshold.value = -24;
-  compressor.knee.value = 10;
-  compressor.ratio.value = 4;
-  compressor.attack.value = 0.005;
-  compressor.release.value = 0.1;
-
-  // Output destination
-  processedDest = audioCtx.createMediaStreamDestination();
-
-  if (noiseEnabled) {
-    sourceNode.connect(hpf);
-    hpf.connect(lpf);
-    lpf.connect(gate);
-    gate.connect(compressor);
-    compressor.connect(processedDest);
-  } else {
-    sourceNode.connect(processedDest);
-  }
-  return processedDest.stream;
-}
 
 function setIdleLog(msg, cls='') {
   const el = document.getElementById('idleLog');
@@ -1840,8 +1802,8 @@ function setIdleLog(msg, cls='') {
 }
 
 function randRoom() {
-  const w = ['echo','nova','orbit','delta','sigma','pulse','flux','relay','vortex','zenith','prism','quasar'];
-  return w[Math.floor(Math.random()*w.length)] + '-' + Math.floor(100+Math.random()*900);
+  const w = ['echo','nova','orbit','delta','sigma','pulse','flux','relay','vortex','zenith'];
+  return w[Math.floor(Math.random()*w.length)] + Math.floor(100+Math.random()*900);
 }
 
 function createRoom() {
@@ -1850,55 +1812,56 @@ function createRoom() {
 }
 
 async function joinRoom() {
-  const raw = document.getElementById('roomInput').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g,'');
-  room = raw.substring(0, 24);
+  const raw = document.getElementById('roomInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  room = raw.substring(0, 22);
   if (!room) { setIdleLog('⚠ введи название комнаты', 'err'); return; }
+
+  // Check ban
+  const data = getUserData(currentUser);
+  if (data?.banned) { setIdleLog('❌ аккаунт заблокирован', 'err'); return; }
 
   setIdleLog('— запрашиваем микрофон —');
   try {
-    const raw = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true }, video: false });
-    localStream = new MediaStream([buildNoiseChain(raw).getAudioTracks()[0]]);
-    // keep raw for muting
-    localStream._rawStream = raw;
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
   } catch(e) {
     setIdleLog('❌ нет доступа к микрофону', 'err'); return;
   }
 
-  setIdleLog('— подключаемся к серверу —');
+  setIdleLog('— подключаемся —');
   tryAsHost(roomToPeerId(room));
 }
 
-function tryAsHost(hostPeerId) {
+function tryAsHost(hostId) {
   isHost = true;
-  myPeer = new Peer(hostPeerId, PEER_CONFIG);
+  myPeer = new Peer(hostId, PEER_CONFIG);
   myPeer.on('open', () => {
     setIdleLog('', 'ok');
     enterCallUI();
     sysMsg('Ты создал комнату #' + room + ' как @' + myNick);
     myPeer.on('call', call => {
       const isScreen = call.metadata?.type === 'screen';
-      call.answer(isScreen ? (screenStream || new MediaStream()) : localStream);
-      if (isScreen) { screenConn = call; handleScreenConn(call, false); }
+      call.answer(isScreen ? new MediaStream() : localStream);
+      if (isScreen) { screenConn = call; handleIncomingScreenConn(call); }
       else { mediaConn = call; handleMediaConn(call); }
     });
     myPeer.on('connection', conn => { dataConn = conn; setupDataConn(conn); });
   });
   myPeer.on('error', err => {
-    if (err.type === 'unavailable-id') { myPeer.destroy(); joinAsGuest(hostPeerId); }
+    if (err.type === 'unavailable-id') { myPeer.destroy(); joinAsGuest(hostId); }
     else setIdleLog('❌ ' + err.message, 'err');
   });
 }
 
-function joinAsGuest(hostPeerId) {
+function joinAsGuest(hostId) {
   isHost = false;
-  myPeer = new Peer('voidg-' + Math.random().toString(36).slice(2,10), PEER_CONFIG);
+  myPeer = new Peer('voidg' + Math.random().toString(36).slice(2,10), PEER_CONFIG);
   myPeer.on('open', () => {
     setIdleLog('— звоним хосту —');
     enterCallUI();
     sysMsg('Ты вошёл в комнату #' + room + ' как @' + myNick);
-    const call = myPeer.call(hostPeerId, localStream, { metadata: { nick: myNick } });
+    const call = myPeer.call(hostId, localStream, { metadata: { nick: myNick } });
     mediaConn = call; handleMediaConn(call);
-    const conn = myPeer.connect(hostPeerId, { metadata: { nick: myNick }, reliable: true });
+    const conn = myPeer.connect(hostId, { metadata: { nick: myNick }, reliable: true });
     dataConn = conn; setupDataConn(conn);
     conn.on('open', () => conn.send({ type: 'hello', nick: myNick }));
   });
@@ -1919,44 +1882,42 @@ function handleMediaConn(call) {
   call.on('error', e => sysMsg('⚠ ' + e.message));
 }
 
-function handleScreenConn(call, isMine) {
-  if (isMine) {
-    // We are sharing, friend gets it via their handleScreenConn
-    return;
-  }
+// Host receives screen stream from guest
+function handleIncomingScreenConn(call) {
   call.on('stream', stream => {
-    const vid = document.getElementById('remoteScreenVideoEl');
-    vid.srcObject = stream;
-    document.getElementById('remoteScreenWrap').classList.add('active');
-    document.getElementById('screenshareEmpty').style.display = 'none';
-    document.getElementById('remoteScreenLabel').textContent = (friendNick || 'Друг') + ' демонстрирует';
-    sysMsg('📺 ' + (friendNick || 'друг') + ' начал демонстрацию экрана');
+    showRemoteScreen(stream);
+    sysMsg('📺 ' + (friendNick || 'друг') + ' начал демонстрацию');
   });
-  call.on('close', () => {
-    document.getElementById('remoteScreenWrap').classList.remove('active');
-    document.getElementById('screenshareEmpty').style.display = '';
-  });
+  call.on('close', () => hideRemoteScreen());
+}
+
+function showRemoteScreen(stream) {
+  const vid = document.getElementById('remoteScreenVideoEl');
+  vid.srcObject = stream;
+  vid.play().catch(()=>{});
+  document.getElementById('remoteScreenWrap').classList.add('active');
+  document.getElementById('screenshareEmpty').style.display = 'none';
+  document.getElementById('remoteScreenLabel').textContent = (friendNick||'Друг') + ' демонстрирует';
+}
+function hideRemoteScreen() {
+  document.getElementById('remoteScreenWrap').classList.remove('active');
+  document.getElementById('screenshareEmpty').style.display = '';
 }
 
 function setupDataConn(conn) {
   conn.on('open', () => {
     if (isHost) conn.send({ type: 'hello', nick: myNick });
   });
-  conn.on('data', data => {
-    if (data.type === 'hello') { friendNick = data.nick || 'друг'; showFriend(friendNick); }
-    if (data.type === 'chat') addMsg(data.nick || friendNick, data.text, 'theirs');
-    if (data.type === 'screen_start') sysMsg('📺 друг начинает демонстрацию...');
-    if (data.type === 'screen_stop') {
-      document.getElementById('remoteScreenWrap').classList.remove('active');
-      document.getElementById('screenshareEmpty').style.display = '';
-      sysMsg('📺 демонстрация экрана завершена');
-    }
+  conn.on('data', d => {
+    if (d.type === 'hello') { friendNick = d.nick || 'друг'; showFriend(friendNick); }
+    if (d.type === 'chat') addMsg(d.nick || friendNick, d.text, 'theirs');
+    if (d.type === 'screen_stop') hideRemoteScreen();
   });
   conn.on('close', () => friendDisconnected());
 }
 
 function showFriend(nick) {
-  if (nick && nick !== friendNick) friendNick = nick;
+  if (nick) friendNick = nick;
   document.getElementById('friendTileName').textContent = friendNick;
   document.getElementById('friendTileAv').textContent = friendNick.slice(0,2).toUpperCase();
   document.getElementById('friendTile').style.display = 'flex';
@@ -1967,6 +1928,7 @@ function friendDisconnected() {
   document.getElementById('friendTile').style.display = 'none';
   document.getElementById('waitingTile').style.display = 'flex';
   document.getElementById('remoteAudio').srcObject = null;
+  hideRemoteScreen();
   sysMsg('@' + friendNick + ' отключился');
 }
 
@@ -1976,11 +1938,9 @@ function enterCallUI() {
   document.getElementById('currentRoom').textContent = room;
   const url = location.href.split('#')[0] + '#' + encodeURIComponent(room);
   document.getElementById('inviteUrl').value = url;
-  updateNoiseUI();
 
-  // Add sidebar room entry
-  const sidebarRooms = document.getElementById('sidebarRooms');
-  sidebarRooms.innerHTML = `
+  // Sidebar
+  document.getElementById('sidebarRooms').innerHTML = `
     <div class="sidebar-item active">
       <div class="sidebar-item-icon room">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1C6 1 2 3.5 2 6.5a4 4 0 008 0C10 3.5 6 1 6 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6.5" r="1.2" fill="currentColor"/></svg>
@@ -2002,52 +1962,24 @@ function toggleMic() {
     icon.innerHTML = `<rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`;
   }
   document.querySelectorAll('#myViz .vbar').forEach(b => b.classList.toggle('muted', isMuted));
-  document.getElementById('myTileStatus').innerHTML = isMuted
-    ? `<svg width="10" height="10" viewBox="0 0 10 10" style="display:inline;margin-right:3px"><circle cx="5" cy="5" r="4" fill="var(--accent3)"/></svg>заглушен`
-    : `<svg width="10" height="10" viewBox="0 0 10 10" style="display:inline;margin-right:3px"><circle cx="5" cy="5" r="4" fill="var(--accent2)"/></svg>в эфире`;
-}
-
-function toggleNoise() {
-  noiseEnabled = !noiseEnabled;
-  updateNoiseUI();
-  // Rebuild audio chain if stream exists
-  if (localStream?._rawStream) {
-    const newProcessed = buildNoiseChain(localStream._rawStream);
-    const newTrack = newProcessed.getAudioTracks()[0];
-    if (mediaConn?.peerConnection) {
-      const sender = mediaConn.peerConnection.getSenders().find(s => s.track?.kind === 'audio');
-      if (sender) sender.replaceTrack(newTrack);
-    }
-    localStream = new MediaStream([newTrack]);
-    localStream._rawStream = localStream._rawStream;
-  }
-  sysMsg(noiseEnabled ? '🎛 шумоподавление включено' : '🎛 шумоподавление выключено');
-}
-
-function updateNoiseUI() {
-  const btn = document.getElementById('noiseBtn');
-  const label = document.getElementById('noiseLabel');
-  btn.classList.toggle('active-on', noiseEnabled);
-  label.style.display = noiseEnabled ? '' : 'none';
 }
 
 function hangup() {
   stopScreenShare(true);
-  mediaConn?.close(); dataConn?.close(); myPeer?.destroy();
+  mediaConn?.close(); screenConn?.close(); dataConn?.close(); myPeer?.destroy();
   localStream?.getTracks().forEach(t => t.stop());
-  localStream?._rawStream?.getTracks().forEach(t => t.stop());
-  if (audioCtx) { audioCtx.close(); audioCtx = null; }
-  mediaConn = dataConn = myPeer = localStream = screenStream = null;
+  mediaConn = screenConn = dataConn = myPeer = localStream = screenStream = null;
   isMuted = false;
 
   document.getElementById('friendTile').style.display = 'none';
   document.getElementById('waitingTile').style.display = 'flex';
   document.getElementById('chatMsgs').innerHTML = '';
   document.getElementById('remoteAudio').srcObject = null;
+  hideRemoteScreen();
 
   const icon = document.getElementById('micIcon');
-  icon.innerHTML = `<rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`;
-  document.getElementById('micBtn').classList.remove('muted-on');
+  if (icon) icon.innerHTML = `<rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`;
+  document.getElementById('micBtn')?.classList.remove('muted-on');
 
   document.getElementById('sidebarRooms').innerHTML = `
     <div class="sidebar-item" onclick="showView('idle')">
@@ -2056,7 +1988,7 @@ function hangup() {
       </div>
       <span class="sidebar-item-name">Войти в канал</span>
     </div>`;
-  showView('idle');
+  if (currentView === 'voice') showView('idle');
 }
 
 function copyLink() {
@@ -2100,63 +2032,53 @@ function openSharePicker() {
   if (screenStream) { stopScreenShare(); return; }
   document.getElementById('shareModal').classList.remove('hidden');
 }
-function closeShareModal() {
-  document.getElementById('shareModal').classList.add('hidden');
-}
+function closeShareModal() { document.getElementById('shareModal').classList.add('hidden'); }
+
 function selectShareSource(s) {
   shareSource = s;
-  ['screen','window','tab'].forEach(x => {
-    document.getElementById('shareOpt' + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle('selected', x === s);
-  });
+  ['screen','window','tab'].forEach(x =>
+    document.getElementById('shareOpt' + x.charAt(0).toUpperCase() + x.slice(1))?.classList.toggle('selected', x === s));
 }
 function selectQuality(q) {
   shareQuality = q;
-  ['auto','720','1080','low'].forEach(x => {
-    document.getElementById('qBtn' + (x === 'auto' ? 'Auto' : x === 'low' ? 'Low' : x)).classList.toggle('selected', x === q);
-  });
+  ['auto','720','1080','low'].forEach(x =>
+    document.getElementById('qBtn' + (x==='auto'?'Auto':x==='low'?'Low':x))?.classList.toggle('selected', x === q));
 }
 
 async function startScreenShare() {
   closeShareModal();
-
-  const constraints = {
-    video: {
-      cursor: 'always',
-      width: { ideal: shareQuality === '1080' ? 1920 : shareQuality === '720' ? 1280 : shareQuality === 'low' ? 854 : 1280 },
-      height: { ideal: shareQuality === '1080' ? 1080 : shareQuality === '720' ? 720 : shareQuality === 'low' ? 480 : 720 },
-      frameRate: { ideal: 30 }
-    },
-    audio: shareSource !== 'screen' ? false : true // system audio only for full screen share
-  };
+  const w = shareQuality==='1080'?1920 : shareQuality==='low'?854 : 1280;
+  const h = shareQuality==='1080'?1080 : shareQuality==='low'?480 : 720;
 
   try {
-    screenStream = await navigator.mediaDevices.getDisplayMedia(constraints);
+    screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: 30 }, cursor: 'always' },
+      audio: false
+    });
   } catch(e) {
     sysMsg('⚠ демонстрация отменена'); return;
   }
 
-  // Show local preview
-  const vid = document.getElementById('localScreenVideo');
-  vid.srcObject = screenStream;
+  // ---- Show LOCAL preview immediately ----
+  const localVid = document.getElementById('localScreenVideo');
+  localVid.srcObject = screenStream;
+  localVid.play().catch(() => {});
   document.getElementById('localScreenWrap').classList.add('active');
   document.getElementById('screenshareEmpty').style.display = 'none';
-
-  // Activate share button
   document.getElementById('shareBtn').classList.add('active-on');
 
-  // Send to peer if connected
-  if (myPeer && dataConn?.open) {
-    dataConn.send({ type: 'screen_start' });
+  // ---- Send to peer if guest (guest calls host with screen stream) ----
+  if (myPeer && !isHost) {
     const hostId = roomToPeerId(room);
-    const screenCall = isHost
-      ? null // host waits for incoming
-      : myPeer.call(hostId, screenStream, { metadata: { nick: myNick, type: 'screen' } });
-    if (screenCall) { screenConn = screenCall; }
+    const call = myPeer.call(hostId, screenStream, { metadata: { nick: myNick, type: 'screen' } });
+    screenConn = call;
+    call.on('error', e => sysMsg('⚠ screen share: ' + e.message));
   }
+  // If host: when guest calls back with screen, handleIncomingScreenConn fires automatically
+  // Notify via data channel
+  if (dataConn?.open) dataConn.send({ type: 'screen_start', nick: myNick });
 
-  // Handle when user stops via browser UI
   screenStream.getVideoTracks()[0].onended = () => stopScreenShare();
-
   sysMsg('📺 ты начал демонстрацию экрана');
 }
 
@@ -2164,14 +2086,17 @@ function stopScreenShare(silent) {
   if (!screenStream) return;
   screenStream.getTracks().forEach(t => t.stop());
   screenStream = null;
+  const localVid = document.getElementById('localScreenVideo');
+  localVid.srcObject = null;
   document.getElementById('localScreenWrap').classList.remove('active');
   document.getElementById('screenshareEmpty').style.display = '';
   document.getElementById('shareBtn').classList.remove('active-on');
   if (!silent) {
     if (dataConn?.open) dataConn.send({ type: 'screen_stop' });
-    sysMsg('📺 демонстрация экрана завершена');
+    sysMsg('📺 демонстрация завершена');
   }
-  screenConn?.close(); screenConn = null;
+  try { screenConn?.close(); } catch(e) {}
+  screenConn = null;
 }
 
 // ============================================================
@@ -2184,19 +2109,18 @@ function esc(s) {
 // ============================================================
 //  STARTUP
 // ============================================================
-document.getElementById('roomInput').addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
-document.getElementById('chatIn').addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
-document.getElementById('dmInput').addEventListener('keydown', e => { if(e.key==='Enter') sendDM(); });
-document.getElementById('friendAddInput').addEventListener('keydown', e => { if(e.key==='Enter') sendFriendRequest(); });
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('roomInput')?.addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
+  document.getElementById('chatIn')?.addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
+  document.getElementById('dmInput')?.addEventListener('keydown', e => { if(e.key==='Enter') sendDM(); });
+  document.getElementById('friendAddInput')?.addEventListener('keydown', e => { if(e.key==='Enter') sendFriendRequest(); });
 
-window.addEventListener('load', () => {
   renderSavedAccounts();
   const saved = getCurrentUser();
-  if (saved && getUserData(saved)) {
-    loginAs(saved);
-  }
+  if (saved && getUserData(saved)) loginAs(saved);
+
   const hash = decodeURIComponent(location.hash.slice(1));
-  if (hash) document.getElementById('roomInput').value = hash;
+  if (hash) { const ri = document.getElementById('roomInput'); if(ri) ri.value = hash; }
 });
 </script>
 </body>
