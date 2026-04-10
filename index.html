@@ -1727,73 +1727,70 @@ function renderSidebarDMs() {
 //  ADMIN PANEL
 // ============================================================
 function renderAdminPanel() {
-  const el = document.getElementById('adminView');
-  if (!el || currentUser !== ADMIN_NICK) return;
+  const panel = document.getElementById('adminPanel');
+  if (!panel || currentUser !== ADMIN_NICK) return;
   const accounts = getAccounts();
   const nicks = Object.keys(accounts);
+  const onlineCount = nicks.filter(n => isOnline(n)).length;
+  const bannedCount = nicks.filter(n => accounts[n] && accounts[n].banned).length;
 
-  el.innerHTML = `
-    <div style="flex:1;overflow-y:auto;padding:24px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2l2 4.5 5 .7-3.5 3.5.8 5L11 13l-4.3 2.7.8-5L4 7.2l5-.7z" stroke="#f7c26a" stroke-width="1.4" fill="none"/></svg>
-        <div>
-          <div style="font-weight:800;font-size:18px;">Админ панель</div>
-          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);">void · управление</div>
-        </div>
-        <div style="margin-left:auto;font-family:Space Mono,monospace;font-size:11px;color:var(--accent2);">${nicks.length} аккаунтов</div>
-      </div>
+  let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">';
+  html += adminStat('Аккаунтов', nicks.length, 'var(--accent)');
+  html += adminStat('Онлайн', onlineCount, 'var(--accent2)');
+  html += adminStat('Забанено', bannedCount, 'var(--accent3)');
+  html += '</div>';
+  html += '<div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Пользователи</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:6px;">';
 
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;">
-          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Всего юзеров</div>
-          <div style="font-size:28px;font-weight:800;color:var(--accent)">${nicks.length}</div>
-        </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;">
-          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Онлайн сейчас</div>
-          <div style="font-size:28px;font-weight:800;color:var(--accent2)">${nicks.filter(n => isOnline(n)).length}</div>
-        </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;">
-          <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Заблокированных</div>
-          <div style="font-size:28px;font-weight:800;color:var(--accent3)">${nicks.filter(n => accounts[n]?.banned).length}</div>
-        </div>
-      </div>
+  nicks.forEach(function(nick) {
+    const a = accounts[nick] || {};
+    const online = isOnline(nick);
+    const banned = !!a.banned;
+    const isAdm = nick === ADMIN_NICK;
+    const friends = (a.friends||[]).filter(f => f.status==='friend').length;
+    const created = a.createdAt ? new Date(a.createdAt).toLocaleDateString('ru') : '—';
+    const borderColor = banned ? 'rgba(247,106,138,0.2)' : isAdm ? 'rgba(247,194,106,0.25)' : 'var(--border)';
+    const avBg = isAdm ? 'rgba(247,194,106,0.15)' : banned ? 'rgba(247,106,138,0.1)' : 'rgba(124,106,247,0.12)';
+    const avColor = isAdm ? '#f7c26a' : banned ? 'var(--accent3)' : 'var(--accent)';
+    const avBorder = isAdm ? 'rgba(247,194,106,0.3)' : banned ? 'rgba(247,106,138,0.3)' : 'rgba(124,106,247,0.3)';
 
-      <div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Пользователи</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        ${nicks.map(nick => {
-          const a = accounts[nick];
-          const online = isOnline(nick);
-          const banned = a?.banned;
-          const isAdm = nick === ADMIN_NICK;
-          const friendCount = (a?.friends||[]).filter(f=>f.status==='friend').length;
-          const created = a?.createdAt ? new Date(a.createdAt).toLocaleDateString('ru') : '—';
-          return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1px solid ${banned?'rgba(247,106,138,0.2)':isAdm?'rgba(247,194,106,0.2)':'var(--border)'};border-radius:10px;${banned?'opacity:0.6':''}">
-            <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Space Mono,monospace;font-size:11px;font-weight:700;flex-shrink:0;background:${isAdm?'rgba(247,194,106,0.15)':banned?'rgba(247,106,138,0.1)':'rgba(124,106,247,0.12)'};color:${isAdm?'#f7c26a':banned?'var(--accent3)':'var(--accent)'};border:1px solid ${isAdm?'rgba(247,194,106,0.3)':banned?'rgba(247,106,138,0.3)':'rgba(124,106,247,0.3)'};">${nick.slice(0,2).toUpperCase()}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;">
-                @${esc(nick)}
-                ${isAdm ? '<span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace;">ADMIN</span>' : ''}
-                ${banned ? '<span style="font-size:9px;color:var(--accent3);background:rgba(247,106,138,0.08);border:1px solid rgba(247,106,138,0.2);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace;">БАН</span>' : ''}
-              </div>
-              <div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);margin-top:2px;">
-                ${online ? '<span style="color:var(--accent2)">● онлайн</span>' : '○ оффлайн'} · друзей: ${friendCount} · зарег: ${created}
-              </div>
-            </div>
-            ${!isAdm ? `<div style="display:flex;gap:6px;">
-              <button onclick="adminBan('${nick}')" style="padding:5px 10px;border-radius:6px;border:1px solid ${banned?'rgba(79,200,168,0.3)':'rgba(247,106,138,0.3)'};background:${banned?'rgba(79,200,168,0.08)':'rgba(247,106,138,0.08)'};color:${banned?'var(--accent2)':'var(--accent3)'};font-family:Space Mono,monospace;font-size:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${banned ? 'Разбан' : 'Бан'}</button>
-              <button onclick="adminDelete('${nick}')" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(247,106,138,0.2);background:transparent;color:var(--muted);font-family:Space Mono,monospace;font-size:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='var(--accent3)'" onmouseout="this.style.color='var(--muted)'">Удалить</button>
-            </div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
+    html += '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface2);border:1px solid ' + borderColor + ';border-radius:10px;opacity:' + (banned ? '0.65' : '1') + ';">';
+    html += '<div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Space Mono,monospace;font-size:11px;font-weight:700;flex-shrink:0;background:' + avBg + ';color:' + avColor + ';border:1px solid ' + avBorder + ';">' + nick.slice(0,2).toUpperCase() + '</div>';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;">@' + esc(nick);
+    if (isAdm) html += ' <span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace">ADMIN</span>';
+    if (banned) html += ' <span style="font-size:9px;color:var(--accent3);background:rgba(247,106,138,0.08);border:1px solid rgba(247,106,138,0.2);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace">БАН</span>';
+    html += '</div>';
+    html += '<div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);margin-top:2px;">';
+    html += (online ? '<span style="color:var(--accent2)">● онлайн</span>' : '○ оффлайн') + ' &nbsp;·&nbsp; друзей: ' + friends + ' &nbsp;·&nbsp; зарег: ' + created;
+    html += '</div></div>';
+    if (!isAdm) {
+      const banBorder = banned ? 'rgba(79,200,168,0.3)' : 'rgba(247,106,138,0.3)';
+      const banBg = banned ? 'rgba(79,200,168,0.08)' : 'rgba(247,106,138,0.08)';
+      const banColor = banned ? 'var(--accent2)' : 'var(--accent3)';
+      const banText = banned ? 'Разбан' : 'Бан';
+      html += '<div style="display:flex;gap:6px;">';
+      html += '<button onclick="adminBan(\''+nick+'\')"  style="padding:5px 10px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid '+banBorder+';background:'+banBg+';color:'+banColor+';">'+banText+'</button>';
+      html += '<button onclick="adminDelete(\''+nick+'\')" style="padding:5px 10px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid var(--border);background:transparent;color:var(--muted);">Удалить</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+  });
 
-      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
-        <div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Опасная зона</div>
-        <button onclick="adminClearAll()" style="padding:9px 16px;border-radius:8px;border:1px solid rgba(247,106,138,0.3);background:rgba(247,106,138,0.08);color:var(--accent3);font-family:Syne,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">Удалить все аккаунты (кроме своего)</button>
-      </div>
-    </div>`;
+  html += '</div>';
+  html += '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">';
+  html += '<div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Опасная зона</div>';
+  html += '<button onclick="adminClearAll()" style="padding:9px 16px;border-radius:8px;border:1px solid rgba(247,106,138,0.3);background:rgba(247,106,138,0.08);color:var(--accent3);font-family:Syne,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">Удалить все аккаунты кроме своего</button>';
+  html += '</div>';
+  panel.innerHTML = html;
 }
 
+function adminStat(label, value, color) {
+  return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">'
+    + '<div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">' + label + '</div>'
+    + '<div style="font-size:26px;font-weight:800;color:' + color + '">' + value + '</div>'
+    + '</div>';
+}
 function adminBan(nick) {
   if (nick === ADMIN_NICK) return;
   const all = getAccounts();
@@ -1832,6 +1829,7 @@ const PEER_CONFIG = {
 };
 
 let myPeer = null, mediaConn = null, screenConn = null, dataConn = null;
+let guestPeerId = null;
 let localStream = null, screenStream = null;
 let isMuted = false, isHost = false;
 let myNick = '';
@@ -1884,9 +1882,9 @@ function tryAsHost(hostId) {
       const isScreen = call.metadata?.type === 'screen';
       call.answer(isScreen ? new MediaStream() : localStream);
       if (isScreen) { screenConn = call; handleIncomingScreenConn(call); }
-      else { mediaConn = call; handleMediaConn(call); }
+      else { guestPeerId = call.peer; mediaConn = call; handleMediaConn(call); }
     });
-    myPeer.on('connection', conn => { dataConn = conn; setupDataConn(conn); });
+    myPeer.on('connection', conn => { guestPeerId = conn.peer; dataConn = conn; setupDataConn(conn); });
   });
   myPeer.on('error', err => {
     if (err.type === 'unavailable-id') { myPeer.destroy(); joinAsGuest(hostId); }
@@ -1897,6 +1895,13 @@ function tryAsHost(hostId) {
 function joinAsGuest(hostId) {
   isHost = false;
   myPeer = new Peer('voidg' + Math.random().toString(36).slice(2,10), PEER_CONFIG);
+  myPeer.on('call', call => {
+    // Host is calling guest back with screen share
+    if (call.metadata?.type === 'screen') {
+      call.answer(new MediaStream());
+      handleIncomingScreenConn(call);
+    }
+  });
   myPeer.on('open', () => {
     setIdleLog('— звоним хосту —');
     enterCallUI();
@@ -1905,7 +1910,7 @@ function joinAsGuest(hostId) {
     mediaConn = call; handleMediaConn(call);
     const conn = myPeer.connect(hostId, { metadata: { nick: myNick }, reliable: true });
     dataConn = conn; setupDataConn(conn);
-    conn.on('open', () => conn.send({ type: 'hello', nick: myNick }));
+    conn.on('open', () => conn.send({ type: 'hello', nick: myNick, isAdmin: myNick === ADMIN_NICK }));
   });
   myPeer.on('error', err => {
     if (err.type === 'peer-unavailable') {
@@ -1948,19 +1953,31 @@ function hideRemoteScreen() {
 
 function setupDataConn(conn) {
   conn.on('open', () => {
-    if (isHost) conn.send({ type: 'hello', nick: myNick });
+    if (isHost) conn.send({ type: 'hello', nick: myNick, isAdmin: myNick === ADMIN_NICK });
   });
   conn.on('data', d => {
-    if (d.type === 'hello') { friendNick = d.nick || 'друг'; showFriend(friendNick); }
+    if (d.type === 'hello') {
+      friendNick = d.nick || 'друг';
+      showFriend(friendNick, d.isAdmin);
+    }
     if (d.type === 'chat') addMsg(d.nick || friendNick, d.text, 'theirs');
-    if (d.type === 'screen_stop') hideRemoteScreen();
+    if (d.type === 'screen_start') sysMsg('📺 @' + (d.nick||friendNick) + ' начал демонстрацию');
+    if (d.type === 'screen_stop') {
+      hideRemoteScreen();
+      sysMsg('📺 демонстрация завершена');
+    }
   });
   conn.on('close', () => friendDisconnected());
 }
 
-function showFriend(nick) {
+function showFriend(nick, isAdmin) {
   if (nick) friendNick = nick;
-  document.getElementById('friendTileName').textContent = friendNick;
+  const nameEl = document.getElementById('friendTileName');
+  if (isAdmin) {
+    nameEl.innerHTML = esc(friendNick) + ' <span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 4px;border-radius:3px;font-family:Space Mono,monospace">ADMIN</span>';
+  } else {
+    nameEl.textContent = friendNick;
+  }
   document.getElementById('friendTileAv').textContent = friendNick.slice(0,2).toUpperCase();
   document.getElementById('friendTile').style.display = 'flex';
   document.getElementById('waitingTile').style.display = 'none';
@@ -2094,31 +2111,40 @@ async function startScreenShare() {
 
   try {
     screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: 30 }, cursor: 'always' },
+      video: { width:{ideal:w}, height:{ideal:h}, frameRate:{ideal:30}, cursor:'always' },
       audio: false
     });
   } catch(e) {
     sysMsg('⚠ демонстрация отменена'); return;
   }
 
-  // ---- Show LOCAL preview immediately ----
+  // Show MY local preview
   const localVid = document.getElementById('localScreenVideo');
   localVid.srcObject = screenStream;
-  localVid.play().catch(() => {});
+  localVid.play().catch(()=>{});
   document.getElementById('localScreenWrap').classList.add('active');
   document.getElementById('screenshareEmpty').style.display = 'none';
   document.getElementById('shareBtn').classList.add('active-on');
 
-  // ---- Send to peer if guest (guest calls host with screen stream) ----
-  if (myPeer && !isHost) {
-    const hostId = roomToPeerId(room);
-    const call = myPeer.call(hostId, screenStream, { metadata: { nick: myNick, type: 'screen' } });
-    screenConn = call;
-    call.on('error', e => sysMsg('⚠ screen share: ' + e.message));
+  // Send stream to the other peer
+  if (myPeer && dataConn) {
+    if (!isHost) {
+      // Guest → calls host with screen
+      const call = myPeer.call(roomToPeerId(room), screenStream, { metadata: { nick: myNick, type: 'screen' } });
+      screenConn = call;
+      call.on('error', e => sysMsg('⚠ screen: ' + e.message));
+    } else {
+      // Host → calls guest back with screen
+      // guestPeerId is stored when guest connected
+      if (guestPeerId) {
+        const call = myPeer.call(guestPeerId, screenStream, { metadata: { nick: myNick, type: 'screen' } });
+        screenConn = call;
+        call.on('error', e => sysMsg('⚠ screen: ' + e.message));
+      }
+    }
+    // Notify via data so remote shows "X is sharing" message
+    if (dataConn.open) dataConn.send({ type: 'screen_start', nick: myNick });
   }
-  // If host: when guest calls back with screen, handleIncomingScreenConn fires automatically
-  // Notify via data channel
-  if (dataConn?.open) dataConn.send({ type: 'screen_start', nick: myNick });
 
   screenStream.getVideoTracks()[0].onended = () => stopScreenShare();
   sysMsg('📺 ты начал демонстрацию экрана');
