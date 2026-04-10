@@ -1220,22 +1220,89 @@ function getAccounts() { return JSON.parse(localStorage.getItem('void_accounts')
 function saveAccounts(obj) { localStorage.setItem('void_accounts', JSON.stringify(obj)); }
 function getCurrentUser() { return localStorage.getItem('void_current') || null; }
 function setCurrentUser(nick) { localStorage.setItem('void_current', nick); }
-function getUserData(nick) {
-  const all = getAccounts();
-  return all[nick] || null;
-}
+function getUserData(nick) { return getAccounts()[nick] || null; }
 function saveUserData(nick, data) {
   const all = getAccounts();
   all[nick] = { ...all[nick], ...data };
   saveAccounts(all);
 }
 
-// Each user has: { passHash, friends: [{nick, status: 'friend'|'pending_out'|'pending_in'}], dmHistory: {nick: [{mine, text, ts}]} }
+// nick → safe PeerJS ID: only a-z0-9 and single hyphens allowed
+// We prefix with "voidu-" for user peers, "voidr-" for room hosts
+function nickToPeerId(nick) {
+  return 'voidu-' + nick.toLowerCase().replace(/[^a-z0-9]/g, '0');
+}
+function roomToPeerId(room) {
+  return 'voidr-' + room.toLowerCase().replace(/[^a-z0-9]/g, '0').substring(0, 20);
+}
+
 function hashPass(s) {
-  // Simple hash (not cryptographic, just basic obfuscation for localStorage)
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
   return h.toString(36);
+}
+
+// ============================================================
+//  FRIENDS DATA  (localStorage — shared on same browser/device)
+//  For cross-device: we deliver via PeerJS user-peer connections
+// ============================================================
+function getFriends() {
+  return getUserData(currentUser)?.friends || [];
+}
+function saveFriends(friends) {
+  saveUserData(currentUser, { friends });
+}
+function getDMHistory(withNick) {
+  return getUserData(currentUser)?.dmHistory?.[withNick] || [];
+}
+function saveDMHistory(withNick, history) {
+  const data = getUserData(currentUser) || {};
+  if (!data.dmHistory) data.dmHistory = {};
+  data.dmHistory[withNick] = history.slice(-300);
+  saveUserData(currentUser, { dmHistory: data.dmHistory });
+}
+// Write into another user's localStorage slot (works only same browser)
+function deliverToLocalUser(toNick, payload) {
+  const all = getAccounts();
+  if (!all[toNick]) return false; // user not on this device
+  if (!all[toNick].inbox) all[toNick].inbox = [];
+  all[toNick].inbox.push({ ...payload, from: currentUser, ts: Date.now() });
+  saveAccounts(all);
+  return true;
+}
+function flushInbox() {
+  const data = getUserData(currentUser);
+  const inbox = data?.inbox || [];
+  if (!inbox.length) return;
+  // clear inbox
+  saveUserData(currentUser, { inbox: [] });
+  inbox.forEach(msg => processInboxMessage(msg));
+}
+function processInboxMessage(msg) {
+  if (msg.type === 'friend_request') {
+    const friends = getFriends();
+    if (!friends.find(f => f.nick === msg.from)) {
+      friends.push({ nick: msg.from, status: 'pending_in' });
+      saveFriends(friends);
+    }
+  } else if (msg.type === 'friend_accept') {
+    const friends = getFriends();
+    const entry = friends.find(f => f.nick === msg.from);
+    if (entry && entry.status === 'pending_out') {
+      entry.status = 'friend';
+      saveFriends(friends);
+    }
+  } else if (msg.type === 'friend_decline') {
+    saveFriends(getFriends().filter(f => !(f.nick === msg.from && f.status === 'pending_out')));
+  } else if (msg.type === 'dm') {
+    const history = getDMHistory(msg.from);
+    history.push({ mine: false, text: msg.text, ts: msg.ts || Date.now() });
+    saveDMHistory(msg.from, history);
+  }
+  renderPendingBadge();
+  renderSidebarDMs();
+  if (currentView === 'friends') renderFriendsList(friendsTab);
+  if (currentView === 'dm' && currentDMNick === msg.from) openDM(msg.from);
 }
 
 // ============================================================
@@ -1295,6 +1362,7 @@ function doLogout() {
   localStorage.removeItem('void_current');
   currentUser = null;
   hangup();
+  if (userPeer) { try { userPeer.destroy(); } catch(e){} userPeer = null; }
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('loginNick').value = '';
@@ -1330,20 +1398,72 @@ function renderSavedAccounts() {
 // ============================================================
 //  APP INIT
 // ============================================================
+let userPeer = null; // permanent peer for friends/DM
+
 function initApp() {
   myNick = currentUser;
   document.getElementById('sidebarMyAv').textContent = myNick.slice(0,2).toUpperCase();
   document.getElementById('sidebarMyName').textContent = '@' + myNick;
   document.getElementById('myTileAv').textContent = myNick.slice(0,2).toUpperCase();
   document.getElementById('myTileName').textContent = myNick;
+
+  // Flush any inbox messages that arrived while offline
+  flushInbox();
+
   renderSidebarDMs();
   renderPendingBadge();
 
-  // Start presence ping loop (mark online)
+  // Start permanent user peer for real-time delivery
+  startUserPeer();
+
   markOnline();
-  setInterval(markOnline, 30000);
+  setInterval(markOnline, 20000);
+  setInterval(flushInbox, 3000); // also poll localStorage inbox
 
   showView('idle');
+}
+
+function startUserPeer() {
+  if (userPeer) { try { userPeer.destroy(); } catch(e){} }
+  const peerId = nickToPeerId(currentUser);
+  userPeer = new Peer(peerId, PEER_CONFIG);
+  userPeer.on('open', () => {
+    console.log('[userPeer] online as', peerId);
+  });
+  userPeer.on('connection', conn => {
+    conn.on('data', data => {
+      if (data && data.voidMsg) processRealtimeMsg(data);
+    });
+  });
+  userPeer.on('error', err => {
+    // ID taken = someone else with same nick online (or stale). Retry with suffix
+    if (err.type === 'unavailable-id') {
+      console.warn('[userPeer] ID taken, retrying...');
+      setTimeout(startUserPeer, 3000);
+    }
+  });
+}
+
+// Deliver a message to another user via their user-peer (real-time)
+// Falls back to localStorage inbox
+function deliverMsg(toNick, payload) {
+  // Try local inbox first (same browser, instant)
+  const localOk = deliverToLocalUser(toNick, payload);
+
+  // Also try PeerJS real-time if they're online
+  try {
+    const theirPeerId = nickToPeerId(toNick);
+    const conn = (userPeer || new Peer(PEER_CONFIG)).connect(theirPeerId, { reliable: true });
+    conn.on('open', () => {
+      conn.send({ voidMsg: true, ...payload, from: currentUser });
+      setTimeout(() => conn.close(), 1000);
+    });
+    conn.on('error', () => {}); // silent fail, inbox covers it
+  } catch(e) {}
+}
+
+function processRealtimeMsg(msg) {
+  processInboxMessage(msg);
 }
 
 function markOnline() {
@@ -1358,7 +1478,7 @@ function markOnline() {
 function isOnline(nick) {
   const data = getUserData(nick);
   if (!data) return false;
-  return data.lastSeen && (Date.now() - data.lastSeen) < 60000;
+  return data.lastSeen && (Date.now() - data.lastSeen) < 45000;
 }
 
 // ============================================================
@@ -1426,33 +1546,37 @@ function saveFriends(friends) {
 function sendFriendRequest() {
   const input = document.getElementById('friendAddInput');
   const target = input.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
-  const log = el => { document.getElementById('friendAddLog').textContent = el.msg; document.getElementById('friendAddLog').className = 'friends-add-log ' + el.cls; };
+  const setLog = (msg, cls='') => {
+    const el = document.getElementById('friendAddLog');
+    el.textContent = msg; el.className = 'friends-add-log ' + cls;
+  };
 
-  if (!target) { log({msg:'⚠ введи ник', cls:'err'}); return; }
-  if (target === currentUser) { log({msg:'⚠ нельзя добавить себя', cls:'err'}); return; }
+  if (!target) { setLog('⚠ введи ник', 'err'); return; }
+  if (target === currentUser) { setLog('⚠ нельзя добавить себя', 'err'); return; }
 
   const accounts = getAccounts();
-  if (!accounts[target]) { log({msg:'⚠ пользователь @' + target + ' не найден', cls:'err'}); return; }
+  if (!accounts[target]) { setLog('⚠ пользователь @' + target + ' не найден — они должны зарегистрироваться на этом сайте', 'err'); return; }
 
   const myFriends = getFriends();
-  if (myFriends.find(f => f.nick === target)) { log({msg:'⚠ уже в списке', cls:'err'}); return; }
+  const existing = myFriends.find(f => f.nick === target);
+  if (existing?.status === 'friend') { setLog('⚠ уже в списке друзей', 'err'); return; }
+  if (existing?.status === 'pending_out') { setLog('⚠ заявка уже отправлена', 'err'); return; }
+  if (existing?.status === 'pending_in') {
+    // They already sent us one — just accept
+    acceptFriend(target);
+    setLog('✓ взаимная заявка — теперь вы друзья!', 'ok');
+    return;
+  }
 
-  // Add to my outgoing
   myFriends.push({ nick: target, status: 'pending_out' });
   saveFriends(myFriends);
 
-  // Add to their incoming
-  const theirData = accounts[target];
-  if (!theirData.friends) theirData.friends = [];
-  if (!theirData.friends.find(f => f.nick === currentUser)) {
-    theirData.friends.push({ nick: currentUser, status: 'pending_in' });
-    saveAccounts(accounts);
-  }
+  // Deliver to target
+  deliverMsg(target, { type: 'friend_request' });
 
   input.value = '';
-  log({msg:'✓ заявка отправлена @' + target, cls:'ok'});
+  setLog('✓ заявка отправлена @' + target, 'ok');
   renderFriendsList(friendsTab);
-  renderSidebarDMs();
 }
 
 function acceptFriend(nick) {
@@ -1460,29 +1584,15 @@ function acceptFriend(nick) {
   const entry = myFriends.find(f => f.nick === nick);
   if (entry) entry.status = 'friend';
   saveFriends(myFriends);
-
-  // Update their side
-  const all = getAccounts();
-  const theirFriends = all[nick]?.friends || [];
-  const theirEntry = theirFriends.find(f => f.nick === currentUser);
-  if (theirEntry) theirEntry.status = 'friend';
-  if (all[nick]) { all[nick].friends = theirFriends; saveAccounts(all); }
-
+  deliverMsg(nick, { type: 'friend_accept' });
   renderFriendsList(friendsTab);
   renderSidebarDMs();
   renderPendingBadge();
 }
 
 function declineFriend(nick) {
-  let myFriends = getFriends().filter(f => f.nick !== nick);
-  saveFriends(myFriends);
-
-  const all = getAccounts();
-  if (all[nick]) {
-    all[nick].friends = (all[nick].friends || []).filter(f => f.nick !== currentUser);
-    saveAccounts(all);
-  }
-
+  saveFriends(getFriends().filter(f => f.nick !== nick));
+  deliverMsg(nick, { type: 'friend_decline' });
   renderFriendsList(friendsTab);
   renderPendingBadge();
 }
@@ -1608,32 +1718,16 @@ function sendDM() {
   if (!text || !currentDMNick) return;
   input.value = '';
 
-  // Save to my history
+  const ts = Date.now();
   const history = getDMHistory(currentDMNick);
-  history.push({ mine: true, text, ts: Date.now() });
+  history.push({ mine: true, text, ts });
   saveDMHistory(currentDMNick, history);
 
-  // Save to their history as received
-  const theirHistory = getDMHistoryFor(currentDMNick, currentUser);
-  theirHistory.push({ mine: false, text, ts: Date.now() });
-  saveDMHistoryFor(currentDMNick, currentUser, theirHistory);
+  // Deliver to friend (localStorage inbox + PeerJS real-time)
+  deliverMsg(currentDMNick, { type: 'dm', text, ts });
 
   renderDMMsg(currentUser, text, 'mine');
-  const msgs = document.getElementById('dmMsgs');
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function getDMHistoryFor(nick, from) {
-  const all = getAccounts();
-  return all[nick]?.dmHistory?.[from] || [];
-}
-
-function saveDMHistoryFor(nick, from, history) {
-  const all = getAccounts();
-  if (!all[nick]) return;
-  if (!all[nick].dmHistory) all[nick].dmHistory = {};
-  all[nick].dmHistory[from] = history.slice(-200);
-  saveAccounts(all);
+  document.getElementById('dmMsgs').scrollTop = 9999;
 }
 
 function renderDMMsg(nick, text, side) {
@@ -1671,26 +1765,6 @@ function renderSidebarDMs() {
     container.appendChild(div);
   });
 }
-
-// Poll for new DMs every 3 seconds
-setInterval(() => {
-  if (!currentUser || currentView !== 'dm' || !currentDMNick) return;
-  // Check if there are new messages from friend in our history
-  const stored = getDMHistory(currentDMNick);
-  const msgs = document.getElementById('dmMsgs');
-  const rendered = msgs.querySelectorAll('.msg').length;
-  if (stored.length > rendered) {
-    openDM(currentDMNick); // re-render
-  }
-}, 2000);
-
-// Poll for friend requests every 5s
-setInterval(() => {
-  if (!currentUser) return;
-  renderPendingBadge();
-  if (currentView === 'friends') renderFriendsList(friendsTab);
-  renderSidebarDMs();
-}, 5000);
 
 // ============================================================
 //  VOICE CHAT (PeerJS)
@@ -1791,7 +1865,7 @@ async function joinRoom() {
   }
 
   setIdleLog('— подключаемся к серверу —');
-  tryAsHost('void--' + room);
+  tryAsHost(roomToPeerId(room));
 }
 
 function tryAsHost(hostPeerId) {
@@ -1817,7 +1891,7 @@ function tryAsHost(hostPeerId) {
 
 function joinAsGuest(hostPeerId) {
   isHost = false;
-  myPeer = new Peer('void-guest-' + Math.random().toString(36).slice(2,8), PEER_CONFIG);
+  myPeer = new Peer('voidg-' + Math.random().toString(36).slice(2,10), PEER_CONFIG);
   myPeer.on('open', () => {
     setIdleLog('— звоним хосту —');
     enterCallUI();
@@ -1830,7 +1904,7 @@ function joinAsGuest(hostPeerId) {
   });
   myPeer.on('error', err => {
     if (err.type === 'peer-unavailable') {
-      myPeer.destroy(); setTimeout(() => tryAsHost('void--' + room), 800);
+      myPeer.destroy(); setTimeout(() => tryAsHost(roomToPeerId(room)), 800);
     } else setIdleLog('❌ ' + err.message, 'err');
   });
 }
@@ -2073,7 +2147,7 @@ async function startScreenShare() {
   // Send to peer if connected
   if (myPeer && dataConn?.open) {
     dataConn.send({ type: 'screen_start' });
-    const hostId = 'void--' + room;
+    const hostId = roomToPeerId(room);
     const screenCall = isHost
       ? null // host waits for incoming
       : myPeer.call(hostId, screenStream, { metadata: { nick: myNick, type: 'screen' } });
