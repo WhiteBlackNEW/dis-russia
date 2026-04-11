@@ -1291,7 +1291,7 @@ function removePeer(pid){
 function kickPeer(pid){
   const p=peers[pid];if(!p)return;
   if(p.dataConn?.open)p.dataConn.send({type:'kick'});
-  p.mediaConn?.close();p.dataConn?.close();nn?.open)p.dataConn.send({type:'kick'});
+  p.mediaConn?.close();p.dataConn?.close();
   sysMsg('⛔ @'+(p.nick||pid)+' кикнут');
   setTimeout(()=>removePeer(pid),300);
 }
