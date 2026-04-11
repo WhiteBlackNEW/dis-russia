@@ -819,18 +819,18 @@ async function renderSidebarDMs(){
   c.innerHTML='';
   const s=await db.ref('friends/'+ns(MN)).get();
   if(!s.exists())return;
-  const friends=[];
+  const friends=new Set();
   s.forEach(ch=>{
-    if(ch.val().status==='friend')friends.push(ch.key);
+    if(ch.val().status==='friend')friends.add(ch.key);
   });
   // Render each friend once
   friends.forEach(nick=>{
     const div=document.createElement('div');div.className='sbi';div.dataset.nick=nick;
     div.onclick=()=>showV('dm',nick);
     if(CV==='dm'&&CDN===nick)div.classList.add('on');
-    div.innerHTML=`<div class="sbic dm">${nick.slice(0,2).toUpperCase()}</div><span class="sbn">@${esc(nick)}</span><div class="sbdot off" id="dot_${nick}"></div>`;
+    div.innerHTML=`<div class="sbic dm">${nick.slice(0,2).toUpperCase()}</div><span class="sbn">@${esc(nick)}</span><div class="sbdot off" id="dot_${ns(nick)}"></div>`;
     c.appendChild(div);
-    isOn(nick).then(on=>{const d=$('dot_'+nick);if(d)d.className='sbdot '+(on?'':'off');});
+    isOn(nick).then(on=>{const d=$('dot_'+ns(nick));if(d)d.className='sbdot '+(on?'':'off');});
   });
 }
 
@@ -867,7 +867,17 @@ function openDM(nick){
 }
 async function sendDM(){
   const inp=$('dmIn');const text=inp.value.trim();
-  if(!text||!CDN)return;inp.value='';
+  if(!text||!CDN)return;
+  // Check if muted
+  const us=await db.ref('users/'+ns(MN)).get();
+  if(us.exists()){
+    const u=us.val();
+    if(u.muted_until&&u.muted_until>Date.now()){
+      showToast('🔇 Ты замьючен, не можешь писать','err');
+      return;
+    }
+  }
+  inp.value='';
   await db.ref('dms/'+dmKey(MN,CDN)).push({from:MN,text,ts:Date.now()});
 }
 function appendDMMsg(nick,text,side){
@@ -1011,7 +1021,17 @@ async function renderAdmin(){
 }
 function aStat(l,v,c){return `<div style="background:var(--s2);border:1px solid var(--b);border-radius:12px;padding:13px 14px"><div style="font-family:Space Mono,monospace;font-size:10px;color:var(--mu);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">${l}</div><div style="font-size:24px;font-weight:800;color:${c}">${v}</div></div>`;}
 
-async function admBan(nick){if(nick===ADMIN)return;const s=await db.ref('users/'+ns(nick)+'/banned').get();await db.ref('users/'+ns(nick)+'/banned').set(!s.val());renderAdmin();}
+async function admBan(nick){
+  if(nick===ADMIN)return;
+  const s=await db.ref('users/'+ns(nick)+'/banned').get();
+  const newState=!s.val();
+  await db.ref('users/'+ns(nick)+'/banned').set(newState);
+  if(newState){
+    // Notify user they are banned
+    await db.ref('notifications/'+ns(nick)).push({type:'banned',from:ADMIN,ts:Date.now()});
+  }
+  renderAdmin();
+}
 async function admMute(nick,mins=10){
   if(nick===ADMIN)return;
   const s=await db.ref('users/'+ns(nick)+'/muted_until').get();
@@ -1090,6 +1110,12 @@ function listenNotifications(){
     db.ref('notifications/'+ns(MN)+'/'+s.key).remove();
     if(n.type==='muted'){
       showToast(`🔇 Ты замьючен на ${n.mins} мин. администратором`,'warn');
+      // Force mute microphone
+      if(localStream){
+        isMuted=true;
+        localStream.getAudioTracks().forEach(t=>t.enabled=false);
+        updateMicUI();
+      }
     } else if(n.type==='kick_room'){
       showToast('⛔ Тебя кикнули из комнаты','err');
       hangup();
@@ -1105,6 +1131,9 @@ function listenNotifications(){
     } else if(n.type==='incoming_call'){
       // Show incoming call overlay
       showIncomingCall(n.from,n.room);
+    } else if(n.type==='banned'){
+      showToast('⛔ Ты забанен администратором','err');
+      setTimeout(()=>doLogout(),2000);
     }
   });
 }
@@ -1173,6 +1202,22 @@ async function joinRoom(){
   const raw=$('roomIn').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
   room=raw.substring(0,22);
   if(!room){setIdleLog('⚠ введи название комнаты','err');return;}
+  
+  // Check if banned or muted
+  const us=await db.ref('users/'+ns(MN)).get();
+  if(us.exists()){
+    const u=us.val();
+    if(u.banned){
+      setIdleLog('⚠ ты забанен','err');
+      setTimeout(()=>doLogout(),1500);
+      return;
+    }
+    if(u.muted_until&&u.muted_until>Date.now()){
+      const mins=Math.ceil((u.muted_until-Date.now())/60000);
+      setIdleLog(`⚠ ты замьючен ещё ${mins} мин`,'err');
+    }
+  }
+  
   setIdleLog('— запрашиваем микрофон —');
   try{
     const constraints={
@@ -1281,10 +1326,11 @@ function addPeerTile(pid,nick,isAdmin){
 }
 function removePeer(pid){
   const p=peers[pid];if(!p)return;
-  if(p.tileEl)p.tileEl.remove();
+  const tile=$('pt_'+pid);
+  if(tile)tile.remove();
   try{p.mediaConn?.close();p.dataConn?.close();p.mySSCall?.close();p.inSSCall?.close();}catch(e){}
   const nick=p.nick||pid;delete peers[pid];
-  if(!$('peersC').children.length)$('waitTile').style.display='flex';
+  if(Object.keys(peers).length===0)$('waitTile').style.display='flex';
   $('remoteAudio').srcObject=null;
   hideRemoteSS();sysMsg('@'+nick+' отключился');
 }
@@ -1341,7 +1387,7 @@ function enterCallUI(){
   showV('voice');
   $('vcRoom').textContent=room;$('vcRoomLbl').textContent=room;
   $('invUrl').value=location.href.split('#')[0]+'#'+encodeURIComponent(room);
-  $('sbRooms').innerHTML=`<div class="sbi on"><div class="sbic room"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1C5.5 1 2 3 2 5.8a3.5 3.5 0 007 0C9 3 5.5 1 5.5 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="5.8" r="1" fill="currentColor"/></svg></div><span class="sbn">#${esc(room)}</span><div class="sbdot"></div></div>`;
+  $('sbRooms').innerHTML=`<div class="sbi on" onclick="showV('voice')"><div class="sbic room"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1C5.5 1 2 3 2 5.8a3.5 3.5 0 007 0C9 3 5.5 1 5.5 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="5.8" r="1" fill="currentColor"/></svg></div><span class="sbn">#${esc(room)}</span><div class="sbdot"></div></div>`;
 }
 function updateMicUI(){
   $('micBtn').classList.toggle('mut',isMuted);
@@ -1351,7 +1397,19 @@ function updateMicUI(){
   document.querySelectorAll('#myViz .vb').forEach(b=>b.classList.toggle('mut',isMuted));
   $('mySt').textContent=isMuted?'● заглушен':'● в эфире';
 }
-function toggleMic(){
+async function toggleMic(){
+  // Check if muted by admin
+  const us=await db.ref('users/'+ns(MN)).get();
+  if(us.exists()){
+    const u=us.val();
+    if(u.muted_until&&u.muted_until>Date.now()){
+      showToast('🔇 Ты замьючен администратором','err');
+      isMuted=true;
+      localStream?.getAudioTracks().forEach(t=>t.enabled=false);
+      updateMicUI();
+      return;
+    }
+  }
   isMuted=!isMuted;
   localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted);
   updateMicUI();
@@ -1362,7 +1420,7 @@ function hangup(){
   peers={};
   if(myPeer){myPeer.destroy();myPeer=null;}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  isMuted=false;isHost=false;
+  isMuted=false;isHost=false;room='';
   $('peersC').innerHTML='';$('waitTile').style.display='flex';
   $('chatMsgs').innerHTML='';$('remoteAudio').srcObject=null;
   hideRemoteSS();updateMicUI();
@@ -1374,8 +1432,17 @@ function copyLink(){
     const b=$('cpBtn');b.textContent='COPIED';setTimeout(()=>b.textContent='COPY',2000);
   });
 }
-function sendChat(){
+async function sendChat(){
   const inp=$('chatIn');const text=inp.value.trim();if(!text)return;
+  // Check if muted
+  const us=await db.ref('users/'+ns(MN)).get();
+  if(us.exists()){
+    const u=us.val();
+    if(u.muted_until&&u.muted_until>Date.now()){
+      showToast('🔇 Ты замьючен, не можешь писать','err');
+      return;
+    }
+  }
   inp.value='';addMsg(MN,text,'mine');
   Object.values(peers).forEach(p=>{if(p.dataConn?.open)p.dataConn.send({type:'chat',nick:MN,text});});
 }
