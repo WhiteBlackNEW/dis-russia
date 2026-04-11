@@ -4,2193 +4,1047 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Void — Voice Chat</title>
+<link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-:root {
-  --bg: #0a0a0f;
-  --surface: #111118;
-  --surface2: #16161f;
-  --surface3: #1c1c28;
-  --border: rgba(255,255,255,0.06);
-  --border-bright: rgba(255,255,255,0.14);
-  --accent: #7c6af7;
-  --accent2: #4fc8a8;
-  --accent3: #f76a8a;
-  --text: #e8e8f0;
-  --muted: #5a5a72;
-  --muted2: #3a3a50;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'Syne', sans-serif;
-  background: var(--bg); color: var(--text);
-  min-height: 100vh; overflow: hidden;
-}
-body::before {
-  content: ''; position: fixed; inset: 0;
-  background:
-    radial-gradient(ellipse 600px 400px at 15% 50%, rgba(124,106,247,0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 500px 300px at 85% 20%, rgba(79,200,168,0.04) 0%, transparent 70%),
-    radial-gradient(ellipse 400px 500px at 70% 85%, rgba(247,106,138,0.03) 0%, transparent 70%);
-  pointer-events: none; z-index: 0;
-}
-
-/* ===== AUTH SCREEN ===== */
-#authScreen {
-  position: fixed; inset: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--bg);
-}
-#authScreen::before {
-  content: ''; position: fixed; inset: 0;
-  background:
-    radial-gradient(ellipse 600px 400px at 20% 50%, rgba(124,106,247,0.08) 0%, transparent 70%),
-    radial-gradient(ellipse 400px 300px at 80% 30%, rgba(79,200,168,0.05) 0%, transparent 70%);
-  pointer-events: none;
-}
-.auth-box {
-  position: relative; z-index: 1;
-  width: 400px; max-width: calc(100vw - 32px);
-  animation: fadeUp 0.4s ease;
-}
-.auth-wordmark {
-  display: flex; align-items: baseline; gap: 10px;
-  margin-bottom: 28px; padding: 0 4px;
-}
-.auth-wordmark-text { font-weight: 800; font-size: 28px; letter-spacing: -1px; color: #fff; }
-.auth-wordmark-tag {
-  font-family: 'Space Mono', monospace; font-size: 11px;
-  color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
-  padding: 2px 8px; border: 1px solid rgba(124,106,247,0.3); border-radius: 2px;
-}
-.auth-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; overflow: hidden; position: relative;
-}
-.auth-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124,106,247,0.5), transparent);
-}
-.auth-tabs {
-  display: flex; border-bottom: 1px solid var(--border);
-}
-.auth-tab {
-  flex: 1; padding: 14px; text-align: center;
-  font-family: 'Space Mono', monospace; font-size: 11px;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-  cursor: pointer; transition: all 0.2s; border: none; background: none;
-}
-.auth-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
-.auth-tab:hover:not(.active) { color: var(--text); }
-.auth-body { padding: 24px; }
-.auth-field { margin-bottom: 16px; }
-.auth-field-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 7px; display: block;
-}
-.auth-input-wrap { position: relative; }
-.auth-input-prefix {
-  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-  font-family: 'Space Mono', monospace; font-size: 13px;
-  color: var(--muted); pointer-events: none; transition: color 0.2s;
-}
-.auth-input-wrap:focus-within .auth-input-prefix { color: var(--accent); }
-.auth-input {
-  width: 100%; background: var(--surface2);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 11px 14px 11px 32px;
-  color: var(--text); font-family: 'Space Mono', monospace;
-  font-size: 13px; outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.auth-input::placeholder { color: var(--muted); }
-.auth-input:focus {
-  border-color: rgba(124,106,247,0.45);
-  box-shadow: 0 0 0 3px rgba(124,106,247,0.08);
-}
-.auth-btn {
-  width: 100%; padding: 12px;
-  background: var(--accent); color: #fff;
-  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
-  border: none; border-radius: 8px; cursor: pointer;
-  transition: all 0.15s; margin-top: 4px;
-  box-shadow: 0 4px 16px rgba(124,106,247,0.28);
-}
-.auth-btn:hover { background: #8d7ef8; box-shadow: 0 4px 20px rgba(124,106,247,0.42); }
-.auth-btn:active { transform: scale(0.98); }
-.auth-log {
-  font-family: 'Space Mono', monospace; font-size: 11px;
-  text-align: center; margin-top: 12px; min-height: 16px; color: var(--muted);
-}
-.auth-log.err { color: var(--accent3); }
-.auth-log.ok { color: var(--accent2); }
-.auth-accounts {
-  margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;
-  display: none;
-}
-.auth-accounts.show { display: block; }
-.auth-accounts-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-  margin-bottom: 10px;
-}
-.saved-account {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 11px; border-radius: 8px;
-  background: var(--surface2); border: 1px solid var(--border);
-  cursor: pointer; transition: all 0.15s; margin-bottom: 6px;
-}
-.saved-account:hover { border-color: rgba(124,106,247,0.3); background: rgba(124,106,247,0.06); }
-.saved-av {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: rgba(124,106,247,0.18); border: 1px solid rgba(124,106,247,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
-  color: var(--accent); flex-shrink: 0;
-}
-.saved-name { font-weight: 600; font-size: 13px; flex: 1; }
-.saved-tag { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
-
-/* ===== MAIN APP LAYOUT ===== */
-#appScreen { display: none; height: 100vh; flex-direction: column; }
-#appScreen.show { display: flex; }
-
-.app-layout { display: flex; flex: 1; overflow: hidden; }
-
-/* Sidebar */
-.sidebar {
-  width: 240px; min-width: 240px;
-  background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; position: relative; z-index: 2;
-}
-.sidebar-header {
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 8px;
-}
-.sidebar-wordmark { font-weight: 800; font-size: 20px; letter-spacing: -1px; color: #fff; }
-.sidebar-tag {
-  font-family: 'Space Mono', monospace; font-size: 9px;
-  color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
-  padding: 1px 6px; border: 1px solid rgba(124,106,247,0.3); border-radius: 2px;
-}
-
-.sidebar-section { padding: 12px 8px 4px; }
-.sidebar-section-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-  padding: 0 8px; margin-bottom: 4px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.sidebar-add-btn {
-  background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 16px; line-height: 1; padding: 2px; border-radius: 4px;
-  transition: color 0.15s;
-}
-.sidebar-add-btn:hover { color: var(--text); }
-
-.sidebar-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; border-radius: 8px; cursor: pointer;
-  transition: background 0.15s; color: var(--muted);
-  font-size: 14px; font-weight: 600; position: relative;
-}
-.sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-.sidebar-item.active { background: rgba(124,106,247,0.12); color: var(--text); }
-.sidebar-item.active::before {
-  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
-  width: 3px; border-radius: 0 2px 2px 0; background: var(--accent);
-}
-.sidebar-item-icon {
-  width: 28px; height: 28px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; font-size: 11px; font-weight: 700;
-  font-family: 'Space Mono', monospace;
-}
-.sidebar-item-icon.room { background: rgba(79,200,168,0.12); color: var(--accent2); font-size: 14px; }
-.sidebar-item-icon.dm { background: rgba(124,106,247,0.15); color: var(--accent); }
-.sidebar-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sidebar-badge {
-  background: var(--accent3); color: #fff;
-  font-family: 'Space Mono', monospace; font-size: 9px;
-  padding: 1px 5px; border-radius: 10px; flex-shrink: 0;
-}
-.sidebar-online-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent2); flex-shrink: 0;
-  box-shadow: 0 0 6px var(--accent2);
-}
-.sidebar-online-dot.offline { background: var(--muted2); box-shadow: none; }
-
-/* User panel at bottom */
-.sidebar-user {
-  margin-top: auto; padding: 10px 12px;
-  border-top: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-.sidebar-user-av {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(124,106,247,0.18); border: 1px solid rgba(124,106,247,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
-  color: var(--accent); flex-shrink: 0;
-}
-.sidebar-user-info { flex: 1; min-width: 0; }
-.sidebar-user-name { font-weight: 600; font-size: 13px; line-height: 1.2; }
-.sidebar-user-tag { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
-.sidebar-logout {
-  background: none; border: none; cursor: pointer; color: var(--muted);
-  padding: 4px; border-radius: 4px; transition: color 0.15s;
-}
-.sidebar-logout:hover { color: var(--accent3); }
-
-/* Main content */
-.main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-
-/* ===== VOICE ROOM VIEW ===== */
-#voiceView { display: flex; flex-direction: column; height: 100%; }
-
-.voice-header {
-  padding: 14px 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px;
-  background: var(--surface); flex-shrink: 0;
-}
-.voice-header-icon { color: var(--accent2); }
-.voice-header-name { font-weight: 700; font-size: 16px; flex: 1; }
-.voice-header-room { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
-
-/* Screen share area */
-.screenshare-area {
-  flex: 1; background: #070710; position: relative;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden; min-height: 0;
-}
-.screenshare-empty {
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
-  color: var(--muted); text-align: center;
-}
-.screenshare-empty svg { opacity: 0.3; }
-.screenshare-empty-text { font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 1px; }
-
-.screenshare-video-wrap {
-  position: absolute; inset: 0;
-  display: none; align-items: center; justify-content: center;
-}
-.screenshare-video-wrap.active { display: flex; }
-.screenshare-video-wrap video {
-  max-width: 100%; max-height: 100%;
-  object-fit: contain; border-radius: 4px;
-}
-.screenshare-label {
-  position: absolute; bottom: 12px; left: 12px;
-  background: rgba(0,0,0,0.7); color: #fff;
-  font-family: 'Space Mono', monospace; font-size: 11px;
-  padding: 4px 10px; border-radius: 6px; backdrop-filter: blur(8px);
-  display: flex; align-items: center; gap: 6px;
-}
-.screenshare-label-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent3); animation: blink 1.5s ease-in-out infinite;
-}
-.screenshare-stop {
-  position: absolute; top: 12px; right: 12px;
-  background: rgba(247,106,138,0.15); border: 1px solid rgba(247,106,138,0.3);
-  color: var(--accent3); font-family: 'Space Mono', monospace; font-size: 11px;
-  padding: 6px 12px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(8px);
-  display: flex; align-items: center; gap: 6px; transition: all 0.15s;
-}
-.screenshare-stop:hover { background: rgba(247,106,138,0.25); }
-
-/* Participants strip */
-.participants-strip {
-  display: flex; gap: 8px; padding: 12px 16px;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  background: var(--surface); flex-shrink: 0; flex-wrap: wrap;
-}
-.participant-tile {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; background: var(--surface2);
-  border: 1px solid var(--border); border-radius: 10px;
-  transition: border-color 0.3s; min-width: 140px;
-}
-.participant-tile.speaking { border-color: rgba(79,200,168,0.4); }
-.p-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; font-family: 'Space Mono', monospace;
-  flex-shrink: 0; position: relative;
-}
-.p-avatar.you { background: rgba(124,106,247,0.18); color: var(--accent); border: 1px solid rgba(124,106,247,0.3); }
-.p-avatar.friend { background: rgba(79,200,168,0.12); color: var(--accent2); border: 1px solid rgba(79,200,168,0.3); }
-.p-avatar.waiting { background: transparent; color: var(--muted2); border: 1px dashed var(--muted2); font-size: 18px; }
-.p-info { flex: 1; min-width: 0; }
-.p-name { font-weight: 600; font-size: 12px; line-height: 1; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.p-status { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
-.p-status.live { color: var(--accent2); }
-
-.viz { display: flex; align-items: center; gap: 2px; height: 20px; }
-.vbar { width: 3px; border-radius: 2px; background: var(--accent); opacity: 0.6; animation: wave 1.2s ease-in-out infinite; }
-.vbar:nth-child(1){height:6px;animation-delay:0s}
-.vbar:nth-child(2){height:14px;animation-delay:.12s}
-.vbar:nth-child(3){height:20px;animation-delay:.22s}
-.vbar:nth-child(4){height:10px;animation-delay:.32s}
-.vbar:nth-child(5){height:16px;animation-delay:.08s}
-.vbar.muted { animation: none; height: 3px !important; opacity: 0.3; background: var(--accent3); }
-.vbar.fb { background: var(--accent2); }
-@keyframes wave { 0%,100%{transform:scaleY(0.3);opacity:0.3} 50%{transform:scaleY(1);opacity:0.75} }
-
-/* Controls bar */
-.voice-controls {
-  display: flex; align-items: center; gap: 6px;
-  padding: 12px 16px; background: var(--surface); flex-shrink: 0;
-  border-top: 1px solid var(--border);
-}
-.vc-btn {
-  display: flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; border-radius: 10px;
-  border: 1px solid var(--border); background: var(--surface2);
-  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
-}
-.vc-btn:hover { border-color: var(--border-bright); background: rgba(255,255,255,0.04); }
-.vc-btn:active { transform: scale(0.94); }
-.vc-btn.muted-on { background: rgba(247,106,138,0.12); border-color: rgba(247,106,138,0.3); }
-.vc-btn.active-on { background: rgba(124,106,247,0.12); border-color: rgba(124,106,247,0.3); }
-.vc-btn svg { pointer-events: none; }
-.vc-hangup { background: rgba(247,106,138,0.1); border-color: rgba(247,106,138,0.2); }
-.vc-hangup:hover { background: rgba(247,106,138,0.28); border-color: rgba(247,106,138,0.5); }
-.vc-divider { width: 1px; height: 28px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
-.vc-info {
-  flex: 1; text-align: center;
-  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
-}
-.vc-info span { color: var(--accent2); }
-.vc-noise-label {
-  font-family: 'Space Mono', monospace; font-size: 9px; color: var(--accent2);
-  letter-spacing: 1px; background: rgba(79,200,168,0.08);
-  border: 1px solid rgba(79,200,168,0.2); border-radius: 4px; padding: 2px 6px;
-}
-
-/* Chat panel in voice */
-.voice-chat {
-  width: 260px; min-width: 260px; border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; background: var(--surface);
-}
-.voice-chat-head {
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
-  flex-shrink: 0;
-}
-.voice-chat-msgs {
-  flex: 1; overflow-y: auto; padding: 10px 14px;
-  display: flex; flex-direction: column; gap: 7px;
-  scroll-behavior: smooth;
-}
-.voice-chat-msgs::-webkit-scrollbar { width: 3px; }
-.voice-chat-msgs::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
-.voice-chat-input-row {
-  display: flex; gap: 6px; padding: 10px 12px 14px;
-  border-top: 1px solid var(--border); flex-shrink: 0;
-}
-.voice-chat-in {
-  flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-  padding: 8px 12px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 13px;
-  outline: none; transition: border-color 0.2s;
-}
-.voice-chat-in:focus { border-color: rgba(124,106,247,0.4); }
-.voice-chat-in::placeholder { color: var(--muted); }
-.voice-send-btn {
-  width: 34px; height: 34px; border-radius: 8px;
-  background: var(--accent); border: none; color: #fff;
-  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.voice-send-btn:hover { background: #8d7ef8; }
-.voice-send-btn:active { transform: scale(0.94); }
-
-.voice-main { display: flex; flex: 1; min-height: 0; }
-.voice-left { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-
-/* ===== IDLE (join/create room) ===== */
-#idleView {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-}
-.idle-card {
-  width: 420px; max-width: 100%;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; overflow: hidden; position: relative;
-}
-.idle-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124,106,247,0.5), transparent);
-}
-.idle-panel { padding: 22px 24px; }
-.idle-panel + .idle-panel { border-top: 1px solid var(--border); }
-.idle-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
-  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
-}
-.idle-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.idle-field { margin-bottom: 14px; }
-.idle-field-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 7px; display: block;
-}
-.idle-input-wrap { position: relative; }
-.idle-input-prefix {
-  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-  font-family: 'Space Mono', monospace; font-size: 13px;
-  color: var(--muted); pointer-events: none; transition: color 0.2s;
-}
-.idle-input-wrap:focus-within .idle-input-prefix { color: var(--accent); }
-.idle-input {
-  width: 100%; background: var(--surface2);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 11px 14px 11px 30px;
-  color: var(--text); font-family: 'Space Mono', monospace;
-  font-size: 13px; outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.idle-input::placeholder { color: var(--muted); }
-.idle-input:focus {
-  border-color: rgba(124,106,247,0.45);
-  box-shadow: 0 0 0 3px rgba(124,106,247,0.08);
-}
-.idle-join-row { display: flex; gap: 8px; }
-.idle-join-row .idle-input-wrap { flex: 1; }
-.idle-divider {
-  display: flex; align-items: center; gap: 12px; margin: 16px 0;
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  color: var(--muted); letter-spacing: 2px;
-}
-.idle-divider::before, .idle-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.idle-btn {
-  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px;
-  padding: 11px 18px; border-radius: 8px; border: none;
-  cursor: pointer; transition: all 0.15s; white-space: nowrap;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.idle-btn:active { transform: scale(0.97); }
-.idle-btn-accent {
-  background: var(--accent); color: #fff;
-  box-shadow: 0 4px 16px rgba(124,106,247,0.28);
-  width: 100%; justify-content: center;
-}
-.idle-btn-accent:hover { background: #8d7ef8; }
-.idle-btn-ghost {
-  background: var(--surface2); color: var(--muted);
-  border: 1px solid var(--border);
-}
-.idle-btn-ghost:hover { border-color: var(--border-bright); color: var(--text); }
-.idle-log {
-  font-family: 'Space Mono', monospace; font-size: 11px;
-  color: var(--muted); text-align: center; min-height: 18px; margin-top: 12px;
-}
-.idle-log.err { color: var(--accent3); }
-.idle-log.ok { color: var(--accent2); }
-
-/* ===== FRIENDS VIEW ===== */
-#friendsView { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.friends-header {
-  padding: 14px 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px;
-  background: var(--surface); flex-shrink: 0;
-}
-.friends-header-title { font-weight: 700; font-size: 16px; flex: 1; }
-.friends-tabs { display: flex; gap: 4px; }
-.friends-tab {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 1px; text-transform: uppercase;
-  padding: 5px 10px; border-radius: 6px; cursor: pointer;
-  border: 1px solid var(--border); background: none; color: var(--muted);
-  transition: all 0.15s;
-}
-.friends-tab:hover { color: var(--text); border-color: var(--border-bright); }
-.friends-tab.active { background: rgba(124,106,247,0.12); color: var(--accent); border-color: rgba(124,106,247,0.3); }
-.friends-tab .badge { 
-  display: inline-block; margin-left: 4px;
-  background: var(--accent3); color: #fff;
-  font-size: 9px; padding: 0 4px; border-radius: 8px;
-}
-
-.friends-add-bar {
-  padding: 14px 20px; border-bottom: 1px solid var(--border);
-  display: flex; gap: 8px; flex-shrink: 0;
-}
-.friends-add-input {
-  flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-  padding: 9px 14px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px;
-  outline: none; transition: border-color 0.2s;
-}
-.friends-add-input:focus { border-color: rgba(124,106,247,0.45); }
-.friends-add-input::placeholder { color: var(--muted); }
-.friends-add-btn {
-  padding: 9px 16px; background: var(--accent); color: #fff;
-  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px;
-  border: none; border-radius: 8px; cursor: pointer; transition: all 0.15s;
-}
-.friends-add-btn:hover { background: #8d7ef8; }
-.friends-add-log {
-  font-family: 'Space Mono', monospace; font-size: 11px; padding: 0 20px 10px;
-  min-height: 18px; color: var(--muted);
-}
-.friends-add-log.err { color: var(--accent3); }
-.friends-add-log.ok { color: var(--accent2); }
-
-.friends-list { flex: 1; overflow-y: auto; padding: 8px 12px; }
-.friends-list::-webkit-scrollbar { width: 4px; }
-.friends-list::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
-.friends-section-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-  padding: 8px 8px 6px;
-}
-.friend-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px; border-radius: 10px; cursor: pointer;
-  transition: background 0.15s; animation: fadeUp 0.2s ease;
-}
-.friend-row:hover { background: rgba(255,255,255,0.03); }
-.friend-av {
-  width: 38px; height: 38px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
-  flex-shrink: 0; position: relative;
-}
-.friend-av.online { background: rgba(79,200,168,0.12); color: var(--accent2); border: 1px solid rgba(79,200,168,0.3); }
-.friend-av.offline { background: rgba(58,58,80,0.4); color: var(--muted); border: 1px solid var(--muted2); }
-.friend-av.pending { background: rgba(124,106,247,0.12); color: var(--accent); border: 1px solid rgba(124,106,247,0.3); }
-.friend-av-status {
-  position: absolute; bottom: -1px; right: -1px;
-  width: 11px; height: 11px; border-radius: 50%;
-  border: 2px solid var(--surface);
-}
-.friend-av-status.online { background: var(--accent2); }
-.friend-av-status.offline { background: var(--muted2); }
-.friend-info { flex: 1; min-width: 0; }
-.friend-name { font-weight: 600; font-size: 14px; line-height: 1.2; }
-.friend-sub { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
-.friend-actions { display: flex; gap: 6px; }
-.friend-action-btn {
-  width: 32px; height: 32px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--surface2);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.15s;
-}
-.friend-action-btn:hover { border-color: var(--border-bright); }
-.friend-action-btn.accept:hover { border-color: rgba(79,200,168,0.4); background: rgba(79,200,168,0.1); }
-.friend-action-btn.decline:hover { border-color: rgba(247,106,138,0.4); background: rgba(247,106,138,0.1); }
-.friend-action-btn.msg:hover { border-color: rgba(124,106,247,0.4); background: rgba(124,106,247,0.1); }
-.empty-state {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  padding: 48px 24px; color: var(--muted); text-align: center;
-}
-.empty-state svg { opacity: 0.3; }
-.empty-state-text { font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 1px; }
-
-/* ===== DM VIEW ===== */
-#dmView { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.dm-header {
-  padding: 14px 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px;
-  background: var(--surface); flex-shrink: 0;
-}
-.dm-header-av {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(79,200,168,0.12); border: 1px solid rgba(79,200,168,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
-  color: var(--accent2); flex-shrink: 0;
-}
-.dm-header-name { font-weight: 700; font-size: 15px; flex: 1; }
-.dm-header-status { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
-.dm-msgs {
-  flex: 1; overflow-y: auto; padding: 14px 20px;
-  display: flex; flex-direction: column; gap: 8px;
-  scroll-behavior: smooth;
-}
-.dm-msgs::-webkit-scrollbar { width: 4px; }
-.dm-msgs::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
-.dm-input-row {
-  display: flex; gap: 8px; padding: 12px 20px 16px;
-  border-top: 1px solid var(--border); flex-shrink: 0;
-  background: var(--surface);
-}
-.dm-input {
-  flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
-  padding: 10px 14px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 14px;
-  outline: none; transition: border-color 0.2s;
-}
-.dm-input:focus { border-color: rgba(124,106,247,0.4); }
-.dm-input::placeholder { color: var(--muted); }
-.dm-send-btn {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--accent); border: none; color: #fff;
-  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
-}
-.dm-send-btn:hover { background: #8d7ef8; }
-
+:root{--bg:#0a0a0f;--surface:#111118;--surface2:#16161f;--surface3:#1c1c28;--border:rgba(255,255,255,0.06);--border-bright:rgba(255,255,255,0.14);--accent:#7c6af7;--accent2:#4fc8a8;--accent3:#f76a8a;--text:#e8e8f0;--muted:#5a5a72;--muted2:#3a3a50}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 600px 400px at 15% 50%,rgba(124,106,247,.07) 0%,transparent 70%),radial-gradient(ellipse 500px 300px at 85% 20%,rgba(79,200,168,.04) 0%,transparent 70%),radial-gradient(ellipse 400px 500px at 70% 85%,rgba(247,106,138,.03) 0%,transparent 70%)}
+/* AUTH */
+#authScreen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.auth-box{width:400px;max-width:calc(100vw - 32px);animation:fadeUp .4s ease}
+.auth-wordmark{display:flex;align-items:baseline;gap:10px;margin-bottom:28px;padding:0 4px}
+.auth-wt{font-weight:800;font-size:28px;letter-spacing:-1px;color:#fff}
+.auth-tag{font-family:'Space Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;padding:2px 8px;border:1px solid rgba(124,106,247,.3);border-radius:2px}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;position:relative}
+.auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(124,106,247,.5),transparent)}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border)}
+.auth-tab{flex:1;padding:14px;text-align:center;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .2s;border:none;background:none;border-bottom:2px solid transparent}
+.auth-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.auth-body{padding:24px}
+.auth-field{margin-bottom:16px}
+.auth-fl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block}
+.auth-iw{position:relative}
+.auth-ip{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);pointer-events:none;transition:color .2s}
+.auth-iw:focus-within .auth-ip{color:var(--accent)}
+.auth-in{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px 11px 32px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;outline:none;transition:border-color .2s}
+.auth-in::placeholder{color:var(--muted)}
+.auth-in:focus{border-color:rgba(124,106,247,.45);box-shadow:0 0 0 3px rgba(124,106,247,.08)}
+.auth-btn{width:100%;padding:12px;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:8px;cursor:pointer;transition:all .15s;margin-top:4px;box-shadow:0 4px 16px rgba(124,106,247,.28)}
+.auth-btn:hover{background:#8d7ef8}
+.auth-log{font-family:'Space Mono',monospace;font-size:11px;text-align:center;margin-top:12px;min-height:16px;color:var(--muted)}
+.auth-log.err{color:var(--accent3)}.auth-log.ok{color:var(--accent2)}
+.saved-list{margin-top:16px;border-top:1px solid var(--border);padding-top:16px;display:none}
+.saved-list.show{display:block}
+.saved-lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.saved-acc{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:6px}
+.saved-acc:hover{border-color:rgba(124,106,247,.3);background:rgba(124,106,247,.06)}
+.saved-av{width:30px;height:30px;border-radius:50%;background:rgba(124,106,247,.18);border:1px solid rgba(124,106,247,.3);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0}
+.saved-name{font-weight:600;font-size:13px;flex:1}
+.saved-hint{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+/* APP */
+#appScreen{display:none;height:100vh;flex-direction:column}
+#appScreen.show{display:flex}
+.app-layout{display:flex;flex:1;overflow:hidden}
+/* SIDEBAR */
+.sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sb-head{padding:16px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sb-wt{font-weight:800;font-size:20px;letter-spacing:-1px;color:#fff}
+.sb-tag{font-family:'Space Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;padding:1px 6px;border:1px solid rgba(124,106,247,.3);border-radius:2px}
+.sb-sec{padding:12px 8px 4px}
+.sb-sec-lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:0 8px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.sb-add{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px;border-radius:4px;transition:color .15s;display:flex;align-items:center}
+.sb-add:hover{color:var(--text)}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;color:var(--muted);font-size:14px;font-weight:600;position:relative}
+.sb-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.sb-item.active{background:rgba(124,106,247,.12);color:var(--text)}
+.sb-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 2px 2px 0;background:var(--accent)}
+.sb-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;font-family:'Space Mono',monospace}
+.sb-icon.room{background:rgba(79,200,168,.12);color:var(--accent2)}
+.sb-icon.dm{background:rgba(124,106,247,.15);color:var(--accent)}
+.sb-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-badge{background:var(--accent3);color:#fff;font-family:'Space Mono',monospace;font-size:9px;padding:1px 5px;border-radius:10px;flex-shrink:0}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);flex-shrink:0;box-shadow:0 0 6px var(--accent2)}
+.sb-dot.off{background:var(--muted2);box-shadow:none}
+.sb-user{margin-top:auto;padding:10px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-uav{width:32px;height:32px;border-radius:50%;background:rgba(124,106,247,.18);border:1px solid rgba(124,106,247,.3);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0}
+.sb-uinfo{flex:1;min-width:0}
+.sb-uname{font-weight:600;font-size:13px;line-height:1.2}
+.sb-utag{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+.sb-logout{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:4px;transition:color .15s}
+.sb-logout:hover{color:var(--accent3)}
+/* MAIN */
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+/* IDLE */
+#idleView{display:none;flex:1;align-items:center;justify-content:center;padding:24px}
+.idle-card{width:420px;max-width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;position:relative}
+.idle-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(124,106,247,.5),transparent)}
+.idle-panel{padding:22px 24px}
+.idle-lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.idle-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+.idle-fl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block}
+.idle-iw{position:relative}
+.idle-ip{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);pointer-events:none}
+.idle-iw:focus-within .idle-ip{color:var(--accent)}
+.idle-in{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px 11px 30px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;outline:none;transition:border-color .2s}
+.idle-in::placeholder{color:var(--muted)}
+.idle-in:focus{border-color:rgba(124,106,247,.45);box-shadow:0 0 0 3px rgba(124,106,247,.08)}
+.idle-row{display:flex;gap:8px}
+.idle-row .idle-iw{flex:1}
+.idle-div{display:flex;align-items:center;gap:12px;margin:16px 0;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px}
+.idle-div::before,.idle-div::after{content:'';flex:1;height:1px;background:var(--border)}
+.btn{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;padding:11px 18px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn:active{transform:scale(.97)}
+.btn-acc{background:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(124,106,247,.28);width:100%;justify-content:center}
+.btn-acc:hover{background:#8d7ef8}
+.btn-ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--border-bright);color:var(--text)}
+.idle-log{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;min-height:18px;margin-top:12px}
+.idle-log.err{color:var(--accent3)}.idle-log.ok{color:var(--accent2)}
+/* VOICE */
+#voiceView{display:none;flex:1;flex-direction:column;overflow:hidden}
+.vc-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0}
+.vc-hname{font-weight:700;font-size:16px;flex:1}
+.vc-main{display:flex;flex:1;min-height:0}
+.vc-left{flex:1;display:flex;flex-direction:column;min-width:0}
+/* Screen share */
+.ss-area{flex:1;background:#07070f;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0}
+.ss-empty{display:flex;flex-direction:column;align-items:center;gap:16px;color:var(--muted);text-align:center}
+.ss-empty svg{opacity:.25}
+.ss-empty-txt{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:1px}
+.ss-wrap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#07070f}
+.ss-wrap.active{display:flex}
+.ss-wrap video{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;display:block}
+.ss-lbl{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.75);color:#fff;font-family:'Space Mono',monospace;font-size:11px;padding:4px 10px;border-radius:6px;backdrop-filter:blur(8px);display:flex;align-items:center;gap:6px}
+.ss-dot{width:7px;height:7px;border-radius:50%;background:var(--accent3);animation:blink 1.5s ease-in-out infinite}
+.ss-stop{position:absolute;top:12px;right:12px;background:rgba(247,106,138,.18);border:1px solid rgba(247,106,138,.35);color:var(--accent3);font-family:'Space Mono',monospace;font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;backdrop-filter:blur(8px);display:flex;align-items:center;gap:6px;transition:all .15s}
+.ss-stop:hover{background:rgba(247,106,138,.3)}
+/* Participants */
+.p-strip{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap}
+.p-tile{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;min-width:130px;position:relative}
+.p-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;flex-shrink:0}
+.p-av.you{background:rgba(124,106,247,.18);color:var(--accent);border:1px solid rgba(124,106,247,.3)}
+.p-av.peer{background:rgba(79,200,168,.12);color:var(--accent2);border:1px solid rgba(79,200,168,.3)}
+.p-av.wait{background:transparent;color:var(--muted2);border:1px dashed var(--muted2)}
+.p-info{flex:1;min-width:0}
+.p-name{font-weight:600;font-size:12px;line-height:1;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-status{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+.p-status.live{color:var(--accent2)}
+.p-kick{position:absolute;top:4px;right:4px;background:none;border:none;cursor:pointer;color:var(--muted);padding:2px 4px;border-radius:3px;font-size:11px;opacity:0;transition:all .15s}
+.p-tile:hover .p-kick{opacity:1}
+.p-kick:hover{color:var(--accent3);background:rgba(247,106,138,.1)}
+.viz{display:flex;align-items:center;gap:2px;height:18px}
+.vbar{width:3px;border-radius:2px;background:var(--accent);opacity:.6;animation:wave 1.2s ease-in-out infinite}
+.vbar:nth-child(1){height:5px;animation-delay:0s}.vbar:nth-child(2){height:12px;animation-delay:.12s}.vbar:nth-child(3){height:18px;animation-delay:.22s}.vbar:nth-child(4){height:8px;animation-delay:.32s}.vbar:nth-child(5){height:14px;animation-delay:.08s}
+.vbar.muted{animation:none;height:3px!important;opacity:.3;background:var(--accent3)}
+.vbar.fb{background:var(--accent2)}
+@keyframes wave{0%,100%{transform:scaleY(.3);opacity:.3}50%{transform:scaleY(1);opacity:.75}}
+/* Invite */
+.inv-box{background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:8px 14px 0}
+.inv-lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.inv-row{display:flex;gap:8px}
+.inv-url{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--accent);font-family:'Space Mono',monospace;font-size:11px;outline:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-copy{font-family:'Space Mono',monospace;font-size:11px;padding:7px 12px;background:rgba(124,106,247,.1);color:var(--accent);border:1px solid rgba(124,106,247,.2);border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-copy:hover{background:rgba(124,106,247,.22)}
+/* Voice controls */
+.vc-ctrl{display:flex;align-items:center;gap:6px;padding:10px 14px;background:var(--surface);flex-shrink:0;border-top:1px solid var(--border)}
+.cv{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .15s;flex-shrink:0}
+.cv:hover{border-color:var(--border-bright);background:rgba(255,255,255,.04)}
+.cv:active{transform:scale(.94)}
+.cv.muted-on{background:rgba(247,106,138,.12);border-color:rgba(247,106,138,.3)}
+.cv.active-on{background:rgba(124,106,247,.12);border-color:rgba(124,106,247,.3)}
+.cv-hang{background:rgba(247,106,138,.1);border-color:rgba(247,106,138,.2)}
+.cv-hang:hover{background:rgba(247,106,138,.28);border-color:rgba(247,106,138,.5)}
+.vc-div{width:1px;height:26px;background:var(--border);margin:0 2px;flex-shrink:0}
+.vc-inf{flex:1;text-align:center;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+.vc-inf span{color:var(--accent2)}
+/* Chat */
+.vc-chat{width:260px;min-width:260px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface)}
+.vc-chat-head{padding:14px 16px 12px;border-bottom:1px solid var(--border);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);flex-shrink:0}
+.vc-msgs{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;scroll-behavior:smooth}
+.vc-msgs::-webkit-scrollbar{width:3px}
+.vc-msgs::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px}
+.vc-inp-row{display:flex;gap:6px;padding:10px 12px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.vc-in{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.vc-in:focus{border-color:rgba(124,106,247,.4)}
+.vc-in::placeholder{color:var(--muted)}
+.vc-send{width:34px;height:34px;border-radius:8px;background:var(--accent);border:none;color:#fff;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vc-send:hover{background:#8d7ef8}
+/* FRIENDS */
+#friendsView{display:none;flex:1;flex-direction:column;overflow:hidden}
+.fv-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0}
+.fv-title{font-weight:700;font-size:16px;flex:1}
+.fv-tabs{display:flex;gap:4px}
+.fv-tab{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);transition:all .15s}
+.fv-tab:hover{color:var(--text);border-color:var(--border-bright)}
+.fv-tab.active{background:rgba(124,106,247,.12);color:var(--accent);border-color:rgba(124,106,247,.3)}
+.fv-tab .badge{display:inline-block;margin-left:4px;background:var(--accent3);color:#fff;font-size:9px;padding:0 4px;border-radius:8px}
+.fv-add{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.fv-add-in{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;outline:none;transition:border-color .2s}
+.fv-add-in:focus{border-color:rgba(124,106,247,.45)}
+.fv-add-in::placeholder{color:var(--muted)}
+.fv-add-btn{padding:9px 16px;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-weight:600;font-size:13px;border:none;border-radius:8px;cursor:pointer;transition:all .15s}
+.fv-add-btn:hover{background:#8d7ef8}
+.fv-log{font-family:'Space Mono',monospace;font-size:11px;padding:6px 20px;min-height:24px;color:var(--muted)}
+.fv-log.err{color:var(--accent3)}.fv-log.ok{color:var(--accent2)}
+.fv-list{flex:1;overflow-y:auto;padding:8px 12px}
+.fv-list::-webkit-scrollbar{width:4px}
+.fv-list::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px}
+.f-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s;animation:fadeUp .2s ease}
+.f-row:hover{background:rgba(255,255,255,.03)}
+.f-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0;position:relative}
+.f-av.online{background:rgba(79,200,168,.12);color:var(--accent2);border:1px solid rgba(79,200,168,.3)}
+.f-av.offline{background:rgba(58,58,80,.4);color:var(--muted);border:1px solid var(--muted2)}
+.f-av.pending{background:rgba(124,106,247,.12);color:var(--accent);border:1px solid rgba(124,106,247,.3)}
+.f-av-dot{position:absolute;bottom:-1px;right:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--surface)}
+.f-av-dot.on{background:var(--accent2)}.f-av-dot.off{background:var(--muted2)}
+.f-info{flex:1;min-width:0}
+.f-name{font-weight:600;font-size:14px;line-height:1.2}
+.f-sub{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)}
+.f-acts{display:flex;gap:6px}
+.f-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.f-btn:hover{border-color:var(--border-bright)}
+.f-btn.acc:hover{border-color:rgba(79,200,168,.4);background:rgba(79,200,168,.1)}
+.f-btn.dec:hover{border-color:rgba(247,106,138,.4);background:rgba(247,106,138,.1)}
+.f-btn.msg:hover{border-color:rgba(124,106,247,.4);background:rgba(124,106,247,.1)}
+.empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 24px;color:var(--muted);text-align:center}
+.empty svg{opacity:.3}
+.empty-txt{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:1px}
+/* DM */
+#dmView{display:none;flex:1;flex-direction:column;overflow:hidden}
+.dm-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0}
+.dm-hav{width:32px;height:32px;border-radius:50%;background:rgba(79,200,168,.12);border:1px solid rgba(79,200,168,.3);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--accent2);flex-shrink:0}
+.dm-hname{font-weight:700;font-size:15px;flex:1}
+.dm-hstatus{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)}
+.dm-msgs{flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+.dm-msgs::-webkit-scrollbar{width:4px}
+.dm-msgs::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px}
+.dm-inp-row{display:flex;gap:8px;padding:12px 20px 16px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.dm-in{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.dm-in:focus{border-color:rgba(124,106,247,.4)}
+.dm-in::placeholder{color:var(--muted)}
+.dm-send{width:40px;height:40px;border-radius:10px;background:var(--accent);border:none;color:#fff;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.dm-send:hover{background:#8d7ef8}
+/* ADMIN */
+#adminView{display:none;flex:1;flex-direction:column;overflow:hidden}
+.adm-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0}
+.adm-title{font-weight:700;font-size:16px;flex:1;color:#f7c26a}
+#adminPanel{flex:1;overflow-y:auto;padding:20px}
+#adminPanel::-webkit-scrollbar{width:4px}
+#adminPanel::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:2px}
 /* Messages */
-.msg { display: flex; gap: 9px; align-items: flex-start; animation: fadeUp 0.2s ease; }
-.msg-av {
-  width: 24px; height: 24px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; font-family: 'Space Mono', monospace;
-  flex-shrink: 0; margin-top: 1px;
-}
-.msg-av.mine { background: rgba(124,106,247,0.2); color: var(--accent); }
-.msg-av.theirs { background: rgba(79,200,168,0.15); color: var(--accent2); }
-.msg-av.sys { background: rgba(58,58,80,0.4); color: var(--muted); font-size: 11px; }
-.msg-body { flex: 1; min-width: 0; }
-.msg-nick { font-family: 'Space Mono', monospace; font-size: 10px; margin-bottom: 2px; }
-.msg-nick.mine { color: var(--accent); }
-.msg-nick.theirs { color: var(--accent2); }
-.msg-text { font-size: 13px; line-height: 1.5; color: var(--text); word-break: break-word; }
-.msg-text.sys { color: var(--muted); font-style: italic; font-size: 12px; }
-
-/* Screen share picker modal */
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-  animation: fadeIn 0.2s ease;
-}
-.modal-overlay.hidden { display: none; }
-.modal {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; width: 560px; max-width: calc(100vw - 32px);
-  max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;
-  position: relative; animation: fadeUp 0.25s ease;
-}
-.modal::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124,106,247,0.5), transparent);
-}
-.modal-header {
-  padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
-}
-.modal-title { font-weight: 700; font-size: 16px; flex: 1; }
-.modal-close {
-  width: 28px; height: 28px; border-radius: 6px;
-  border: 1px solid var(--border); background: var(--surface2);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.15s; color: var(--muted);
-}
-.modal-close:hover { border-color: var(--border-bright); color: var(--text); }
-.modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
-.modal-body::-webkit-scrollbar { width: 4px; }
-.modal-body::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
-.modal-section-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-  margin-bottom: 10px; margin-top: 14px;
-}
-.modal-section-label:first-child { margin-top: 0; }
-.share-option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
-.share-option {
-  background: var(--surface2); border: 2px solid var(--border);
-  border-radius: 10px; padding: 12px 10px; cursor: pointer;
-  transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  text-align: center;
-}
-.share-option:hover { border-color: rgba(124,106,247,0.3); background: rgba(124,106,247,0.06); }
-.share-option.selected { border-color: var(--accent); background: rgba(124,106,247,0.1); }
-.share-option-icon { color: var(--accent); opacity: 0.8; }
-.share-option-name {
-  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;
-}
-.share-option-sub { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); }
-
-.modal-quality-row { display: flex; gap: 8px; margin-bottom: 16px; }
-.quality-btn {
-  flex: 1; padding: 8px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--surface2);
-  cursor: pointer; transition: all 0.15s; text-align: center;
-  font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted);
-}
-.quality-btn:hover { border-color: var(--border-bright); color: var(--text); }
-.quality-btn.selected { border-color: rgba(79,200,168,0.4); background: rgba(79,200,168,0.08); color: var(--accent2); }
-.quality-btn-label { font-weight: 700; display: block; margin-bottom: 2px; }
-.quality-btn-sub { font-size: 9px; color: inherit; opacity: 0.7; }
-
-.modal-footer {
-  padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0;
-  display: flex; align-items: center; gap: 10px;
-}
-.modal-footer-note { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); flex: 1; }
-.modal-confirm-btn {
-  padding: 10px 20px; background: var(--accent); color: #fff;
-  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px;
-  border: none; border-radius: 8px; cursor: pointer; transition: all 0.15s;
-  box-shadow: 0 4px 16px rgba(124,106,247,0.28);
-}
-.modal-confirm-btn:hover { background: #8d7ef8; }
-.modal-cancel-btn {
-  padding: 10px 16px;
-  background: var(--surface2); border: 1px solid var(--border);
-  color: var(--muted); font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px;
-  border-radius: 8px; cursor: pointer; transition: all 0.15s;
-}
-.modal-cancel-btn:hover { border-color: var(--border-bright); color: var(--text); }
-
-/* Invite box */
-.invite-box {
-  background: var(--surface3); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
-}
-.invite-label {
-  font-family: 'Space Mono', monospace; font-size: 10px;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 7px;
-}
-.invite-row { display: flex; gap: 8px; }
-.invite-url {
-  flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-  padding: 7px 10px; color: var(--accent);
-  font-family: 'Space Mono', monospace; font-size: 11px;
-  outline: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.btn-copy {
-  font-family: 'Space Mono', monospace; font-size: 11px; padding: 7px 12px;
-  background: rgba(124,106,247,0.1); color: var(--accent);
-  border: 1px solid rgba(124,106,247,0.2); border-radius: 6px;
-  cursor: pointer; transition: all 0.15s; white-space: nowrap;
-}
-.btn-copy:hover { background: rgba(124,106,247,0.22); }
-
-/* Admin panel */
-.admin-user-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px; border-radius: 10px;
-  background: var(--surface2); border: 1px solid var(--border);
-  animation: fadeUp 0.2s ease;
-}
-.admin-user-av {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: rgba(58,58,80,0.6); color: var(--muted);
-  border: 1px solid var(--muted2);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
-  flex-shrink: 0;
-}
-.admin-user-av.online { background: rgba(79,200,168,0.12); color: var(--accent2); border-color: rgba(79,200,168,0.3); }
-.admin-user-info { flex: 1; min-width: 0; }
-.admin-user-name { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-.admin-crown { font-size: 11px; color: var(--accent); font-family: 'Space Mono', monospace; }
-.admin-user-meta { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
-.admin-online { color: var(--accent2); }
-.admin-offline { color: var(--muted2); }
-.admin-user-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.admin-btn-del {
-  display: flex; align-items: center; gap: 5px;
-  padding: 5px 10px; border-radius: 6px;
-  border: 1px solid rgba(247,106,138,0.3); background: rgba(247,106,138,0.08);
-  color: var(--accent3); font-family: 'Space Mono', monospace; font-size: 10px;
-  cursor: pointer; transition: all 0.15s;
-}
-.admin-btn-del:hover { background: rgba(247,106,138,0.2); }
-.admin-btn-kick {
-  display: flex; align-items: center; gap: 5px;
-  padding: 5px 10px; border-radius: 6px;
-  border: 1px solid rgba(124,106,247,0.3); background: rgba(124,106,247,0.08);
-  color: var(--accent); font-family: 'Space Mono', monospace; font-size: 10px;
-  cursor: pointer; transition: all 0.15s;
-}
-.admin-btn-kick:hover { background: rgba(124,106,247,0.2); }
-
-@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-@keyframes fadeIn { from{opacity:0} to{opacity:1} }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
-audio, video { display: none; }
-video.remote-screen { display: block; }
+.msg{display:flex;gap:9px;align-items:flex-start;animation:fadeUp .2s ease}
+.msg-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;flex-shrink:0;margin-top:1px}
+.msg-av.mine{background:rgba(124,106,247,.2);color:var(--accent)}
+.msg-av.theirs{background:rgba(79,200,168,.15);color:var(--accent2)}
+.msg-av.sys{background:rgba(58,58,80,.4);color:var(--muted);font-size:11px}
+.msg-body{flex:1;min-width:0}
+.msg-nick{font-family:'Space Mono',monospace;font-size:10px;margin-bottom:2px}
+.msg-nick.mine{color:var(--accent)}.msg-nick.theirs{color:var(--accent2)}
+.msg-text{font-size:13px;line-height:1.5;color:var(--text);word-break:break-word}
+.msg-text.sys{color:var(--muted);font-style:italic;font-size:12px}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:540px;max-width:calc(100vw - 32px);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;position:relative;animation:fadeUp .25s ease}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(124,106,247,.5),transparent)}
+.modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.modal-title{font-weight:700;font-size:16px;flex:1}
+.modal-x{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;color:var(--muted)}
+.modal-x:hover{border-color:var(--border-bright);color:var(--text)}
+.modal-body{padding:16px 20px;overflow-y:auto;flex:1}
+.modal-slbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:14px}
+.modal-slbl:first-child{margin-top:0}
+.ss-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ss-opt{background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:12px 10px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.ss-opt:hover{border-color:rgba(124,106,247,.3);background:rgba(124,106,247,.06)}
+.ss-opt.sel{border-color:var(--accent);background:rgba(124,106,247,.1)}
+.ss-opt-icon{color:var(--accent);opacity:.85}
+.ss-opt-name{font-family:'Space Mono',monospace;font-size:10px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}
+.ss-opt-sub{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)}
+.q-row{display:flex;gap:8px;margin-top:8px}
+.q-btn{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .15s;text-align:center;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)}
+.q-btn:hover{border-color:var(--border-bright);color:var(--text)}
+.q-btn.sel{border-color:rgba(79,200,168,.4);background:rgba(79,200,168,.08);color:var(--accent2)}
+.q-lbl{font-weight:700;display:block;margin-bottom:2px}
+.q-sub{font-size:9px;opacity:.7}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:10px}
+.modal-note{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);flex:1}
+.modal-ok{padding:10px 20px;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-weight:600;font-size:13px;border:none;border-radius:8px;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(124,106,247,.28)}
+.modal-ok:hover{background:#8d7ef8}
+.modal-cancel{padding:10px 16px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;font-size:13px;border-radius:8px;cursor:pointer;transition:all .15s}
+.modal-cancel:hover{border-color:var(--border-bright);color:var(--text)}
+.badge-adm{font-size:9px;color:#f7c26a;background:rgba(247,194,106,.12);border:1px solid rgba(247,194,106,.3);padding:1px 5px;border-radius:3px;font-family:'Space Mono',monospace;vertical-align:middle;margin-left:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+audio{display:none}
 </style>
 </head>
 <body>
 <audio id="remoteAudio" autoplay playsinline></audio>
-<video id="remoteScreenVideo" autoplay playsinline class="remote-screen" style="display:none"></video>
-
-<!-- ===== AUTH ===== -->
+<!-- AUTH -->
 <div id="authScreen">
   <div class="auth-box">
-    <div class="auth-wordmark">
-      <span class="auth-wordmark-text">void</span>
-      <span class="auth-wordmark-tag">voice</span>
-    </div>
+    <div class="auth-wordmark"><span class="auth-wt">void</span><span class="auth-tag">voice</span></div>
     <div class="auth-card">
       <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Войти</button>
-        <button class="auth-tab" id="tabReg" onclick="switchAuthTab('reg')">Регистрация</button>
+        <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Войти</button>
+        <button class="auth-tab" id="tabReg" onclick="switchTab('reg')">Регистрация</button>
       </div>
       <div class="auth-body">
         <div id="loginForm">
-          <div class="auth-field">
-            <label class="auth-field-label">Ник</label>
-            <div class="auth-input-wrap">
-              <span class="auth-input-prefix">@</span>
-              <input class="auth-input" id="loginNick" placeholder="твой_ник" maxlength="24" autocomplete="off" spellcheck="false" />
-            </div>
-          </div>
-          <div class="auth-field">
-            <label class="auth-field-label">Пароль</label>
-            <div class="auth-input-wrap">
-              <span class="auth-input-prefix" style="font-size:11px">🔑</span>
-              <input class="auth-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="off" />
-            </div>
-          </div>
+          <div class="auth-field"><label class="auth-fl">Ник</label><div class="auth-iw"><span class="auth-ip">@</span><input class="auth-in" id="loginNick" placeholder="твой_ник" maxlength="24" autocomplete="off" spellcheck="false"/></div></div>
+          <div class="auth-field"><label class="auth-fl">Пароль</label><div class="auth-iw"><span class="auth-ip" style="font-size:10px">🔑</span><input class="auth-in" id="loginPass" type="password" placeholder="••••••••" autocomplete="off"/></div></div>
           <button class="auth-btn" onclick="doLogin()">Войти</button>
         </div>
         <div id="regForm" style="display:none">
-          <div class="auth-field">
-            <label class="auth-field-label">Придумай ник</label>
-            <div class="auth-input-wrap">
-              <span class="auth-input-prefix">@</span>
-              <input class="auth-input" id="regNick" placeholder="крутой_ник" maxlength="24" autocomplete="off" spellcheck="false" />
-            </div>
-          </div>
-          <div class="auth-field">
-            <label class="auth-field-label">Пароль</label>
-            <div class="auth-input-wrap">
-              <span class="auth-input-prefix" style="font-size:11px">🔑</span>
-              <input class="auth-input" id="regPass" type="password" placeholder="••••••••" autocomplete="off" />
-            </div>
-          </div>
-          <div class="auth-field">
-            <label class="auth-field-label">Повтори пароль</label>
-            <div class="auth-input-wrap">
-              <span class="auth-input-prefix" style="font-size:11px">🔑</span>
-              <input class="auth-input" id="regPass2" type="password" placeholder="••••••••" autocomplete="off" />
-            </div>
-          </div>
+          <div class="auth-field"><label class="auth-fl">Ник (a-z, 0-9, _)</label><div class="auth-iw"><span class="auth-ip">@</span><input class="auth-in" id="regNick" placeholder="kruto_nick" maxlength="24" autocomplete="off" spellcheck="false"/></div></div>
+          <div class="auth-field"><label class="auth-fl">Пароль</label><div class="auth-iw"><span class="auth-ip" style="font-size:10px">🔑</span><input class="auth-in" id="regPass" type="password" placeholder="••••••••" autocomplete="off"/></div></div>
+          <div class="auth-field"><label class="auth-fl">Повтори пароль</label><div class="auth-iw"><span class="auth-ip" style="font-size:10px">🔑</span><input class="auth-in" id="regPass2" type="password" placeholder="••••••••" autocomplete="off"/></div></div>
           <button class="auth-btn" onclick="doRegister()">Создать аккаунт</button>
         </div>
         <div class="auth-log" id="authLog"></div>
-        <div class="auth-accounts" id="savedAccountsBlock">
-          <div class="auth-accounts-label">Сохранённые аккаунты</div>
-          <div id="savedAccountsList"></div>
-        </div>
+        <div class="saved-list" id="savedList"><div class="saved-lbl">Сохранённые</div><div id="savedAccs"></div></div>
       </div>
     </div>
   </div>
 </div>
-
-<!-- ===== MAIN APP ===== -->
+<!-- APP -->
 <div id="appScreen">
   <div class="app-layout">
-
-    <!-- Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-wordmark">void</span>
-        <span class="sidebar-tag">voice</span>
+      <div class="sb-head"><span class="sb-wt">void</span><span class="sb-tag">voice</span></div>
+      <div class="sb-sec">
+        <div class="sb-sec-lbl">Голосовые<button class="sb-add" onclick="showView('idle')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
+        <div id="sbRooms"><div class="sb-item" onclick="showView('idle')"><div class="sb-icon room"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1C6.5 1 2 3.5 2 7a4.5 4.5 0 009 0C11 3.5 6.5 1 6.5 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="6.5" cy="7" r="1.3" fill="currentColor"/></svg></div><span class="sb-name">Войти в канал</span></div></div>
       </div>
-
-      <div class="sidebar-section">
-        <div class="sidebar-section-label">
-          Голосовые
-          <button class="sidebar-add-btn" onclick="showView('idle')" title="Создать комнату">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          </button>
+      <div class="sb-sec">
+        <div class="sb-sec-lbl">Друзья<button class="sb-add" onclick="showView('friends')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="4" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 11c0-2 1.6-3.5 3.5-3.5s3.5 1.5 3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M10.5 6v4M8.5 8h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></div>
+        <div class="sb-item" onclick="showView('friends')">
+          <div class="sb-icon" style="background:rgba(124,106,247,.1)"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="4.5" cy="4" r="1.8" stroke="var(--accent)" stroke-width="1.2"/><path d="M1 11c0-2 1.6-3.5 3.5-3.5S8 9 8 11" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/><circle cx="9.5" cy="4.5" r="1.3" stroke="var(--accent)" stroke-width="1.2"/><path d="M7.5 11c0-1.5.8-2.7 2-3.2" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+          <span class="sb-name" style="color:var(--text)">Все друзья</span>
+          <span class="sb-badge" id="pendingBadge" style="display:none">0</span>
         </div>
-        <div id="sidebarRooms">
-          <div class="sidebar-item" onclick="showView('idle')">
-            <div class="sidebar-item-icon room">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 2 4 2 8a5 5 0 0010 0c0-4-5-6.5-5-6.5z" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/></svg>
-            </div>
-            <span class="sidebar-item-name">Войти в канал</span>
-          </div>
-        </div>
+        <div id="sbDMs"></div>
       </div>
-
-      <div class="sidebar-section">
-        <div class="sidebar-section-label">
-          Друзья
-          <button class="sidebar-add-btn" onclick="showView('friends')" title="Управление друзьями">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 11c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M10.5 6v4M8.5 8h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-        <div id="sidebarFriends">
-          <div class="sidebar-item" onclick="showView('friends')">
-            <div class="sidebar-item-icon" style="background:rgba(124,106,247,0.1)">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="4.5" cy="4" r="2" stroke="var(--accent)" stroke-width="1.2"/><path d="M1 11c0-1.9 1.6-3.5 3.5-3.5S8 9.1 8 11" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/><circle cx="10" cy="4.5" r="1.5" stroke="var(--accent)" stroke-width="1.2"/><path d="M8 11c0-1.7 1-3 2-3.5" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/></svg>
-            </div>
-            <span class="sidebar-item-name" style="color:var(--text)">Все друзья</span>
-            <span class="sidebar-badge" id="pendingBadge" style="display:none">0</span>
-          </div>
-        </div>
-        <div id="sidebarDMs"></div>
-      </div>
-
-      <div class="sidebar-user">
-        <div class="sidebar-user-av" id="sidebarMyAv">ВЫ</div>
-        <div class="sidebar-user-info">
-          <div class="sidebar-user-name" id="sidebarMyName">—</div>
-          <div class="sidebar-user-tag">онлайн</div>
-        </div>
-        <button class="sidebar-logout" id="adminBtn" onclick="showView('admin')" title="Админ-панель" style="display:none;color:var(--accent)">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1l1.8 3.6L14 5.6l-3 2.9.7 4.1L8 10.5l-3.7 2.1.7-4.1-3-2.9 4.2-.6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button class="sidebar-logout" onclick="doLogout()" title="Выйти">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+      <div class="sb-user">
+        <div class="sb-uav" id="sbMyAv">ВЫ</div>
+        <div class="sb-uinfo"><div class="sb-uname" id="sbMyName">—</div><div class="sb-utag">онлайн</div></div>
+        <button class="sb-logout" onclick="doLogout()" title="Выйти"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
     </div>
-
-    <!-- Main content -->
     <div class="main-content">
-
-      <!-- Idle / room picker -->
-      <div id="idleView" style="display:none; flex:1; align-items:center; justify-content:center; padding:24px;">
+      <!-- IDLE -->
+      <div id="idleView">
         <div class="idle-card">
           <div class="idle-panel">
-            <div class="idle-label">Комната</div>
-            <div class="idle-field">
-              <label class="idle-field-label">Создать новую</label>
-              <button class="idle-btn idle-btn-accent" onclick="createRoom()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
-                Создать комнату
-              </button>
+            <div class="idle-lbl">Комната</div>
+            <div style="margin-bottom:14px"><label class="idle-fl">Создать новую</label>
+              <button class="btn btn-acc" onclick="createRoom()"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5v12M1.5 7.5h12" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>Создать комнату</button>
             </div>
-            <div class="idle-divider">или войти</div>
-            <div class="idle-field">
-              <label class="idle-field-label">По названию</label>
-              <div class="idle-join-row">
-                <div class="idle-input-wrap">
-                  <span class="idle-input-prefix">#</span>
-                  <input class="idle-input" id="roomInput" placeholder="название-комнаты" autocomplete="off" spellcheck="false" />
-                </div>
-                <button class="idle-btn idle-btn-ghost" onclick="joinRoom()">Войти</button>
-              </div>
+            <div class="idle-div">или войти</div>
+            <div><label class="idle-fl">По названию</label>
+              <div class="idle-row"><div class="idle-iw"><span class="idle-ip">#</span><input class="idle-in" id="roomInput" placeholder="название" autocomplete="off" spellcheck="false"/></div>
+              <button class="btn btn-ghost" onclick="joinRoom()">Войти</button></div>
             </div>
             <div class="idle-log" id="idleLog"></div>
           </div>
         </div>
       </div>
-
-      <!-- Voice room -->
-      <div id="voiceView" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
-        <div class="voice-header">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="voice-header-icon">
-            <path d="M9 1.5C9 1.5 3 5 3 10a6 6 0 0012 0c0-5-6-8.5-6-8.5z" stroke="currentColor" stroke-width="1.3" fill="none"/>
-            <circle cx="9" cy="10" r="2" fill="currentColor"/>
-          </svg>
-          <span class="voice-header-name"># <span id="voiceRoomName">—</span></span>
-          <span class="voice-header-room" id="voiceRoomSub">голосовой канал</span>
-        </div>
-        <div class="voice-main">
-          <div class="voice-left">
-            <!-- Screen share area -->
-            <div class="screenshare-area" id="screenshareArea">
-              <div class="screenshare-empty" id="screenshareEmpty">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                  <rect x="4" y="12" width="56" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
-                  <path d="M20 48l-4 8M44 48l4 8M16 56h32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                <div class="screenshare-empty-text">Никто не показывает экран</div>
-              </div>
-              <!-- Local screen preview -->
-              <div class="screenshare-video-wrap" id="localScreenWrap">
-                <video id="localScreenVideo" autoplay muted playsinline style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;"></video>
-                <div class="screenshare-label">
-                  <div class="screenshare-label-dot"></div>
-                  <span id="localScreenLabel">Ты демонстрируешь</span>
-                </div>
-                <button class="screenshare-stop" onclick="stopScreenShare()">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="2" width="8" height="8" rx="1" fill="currentColor"/></svg>
-                  Остановить
-                </button>
-              </div>
-              <!-- Remote screen -->
-              <div class="screenshare-video-wrap" id="remoteScreenWrap">
-                <video id="remoteScreenVideoEl" autoplay playsinline style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;"></video>
-                <div class="screenshare-label">
-                  <div class="screenshare-label-dot"></div>
-                  <span id="remoteScreenLabel">демонстрирует экран</span>
-                </div>
-              </div>
+      <!-- VOICE -->
+      <div id="voiceView">
+        <div class="vc-head"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="color:var(--accent2)"><path d="M9 1.5C9 1.5 3 5 3 10a6 6 0 0012 0c0-5-6-8.5-6-8.5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="9" cy="10" r="2" fill="currentColor"/></svg><span class="vc-hname"># <span id="vcRoomName">—</span></span></div>
+        <div class="vc-main">
+          <div class="vc-left">
+            <div class="ss-area" id="ssArea">
+              <div class="ss-empty" id="ssEmpty"><svg width="60" height="60" viewBox="0 0 60 60" fill="none"><rect x="4" y="10" width="52" height="34" rx="4" stroke="currentColor" stroke-width="2"/><path d="M18 44l-3 8M42 44l3 8M14 52h32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><div class="ss-empty-txt">Никто не показывает экран</div></div>
+              <div class="ss-wrap" id="mySSWrap"><video id="mySSVideo" autoplay muted playsinline></video><div class="ss-lbl"><div class="ss-dot"></div><span>Ты демонстрируешь</span></div><button class="ss-stop" onclick="stopSS()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="2" y="2" width="7" height="7" rx="1" fill="currentColor"/></svg>Остановить</button></div>
+              <div class="ss-wrap" id="remoteSSWrap"><video id="remoteSSVideo" autoplay playsinline></video><div class="ss-lbl"><div class="ss-dot"></div><span id="remoteSSlbl">демонстрирует</span></div></div>
             </div>
-
-            <!-- Participants -->
-            <div class="participants-strip">
-              <div class="participant-tile" id="myTile">
-                <div class="p-avatar you" id="myTileAv">ВЫ</div>
-                <div class="p-info">
-                  <div class="p-name" id="myTileName">Ты</div>
-                  <div class="p-status live" id="myTileStatus">
-                    <svg width="10" height="10" viewBox="0 0 10 10" style="display:inline;margin-right:3px"><circle cx="5" cy="5" r="4" fill="var(--accent2)"/></svg>в эфире
-                  </div>
-                </div>
-                <div class="viz" id="myViz">
-                  <div class="vbar"></div><div class="vbar"></div><div class="vbar"></div>
-                  <div class="vbar"></div><div class="vbar"></div>
-                </div>
-              </div>
-
-              <div class="participant-tile" id="friendTile" style="display:none">
-                <div class="p-avatar friend" id="friendTileAv">👤</div>
-                <div class="p-info">
-                  <div class="p-name" id="friendTileName">Друг</div>
-                  <div class="p-status live">
-                    <svg width="10" height="10" viewBox="0 0 10 10" style="display:inline;margin-right:3px"><circle cx="5" cy="5" r="4" fill="var(--accent2)"/></svg>подключён
-                  </div>
-                </div>
-                <div class="viz">
-                  <div class="vbar fb"></div><div class="vbar fb"></div><div class="vbar fb"></div>
-                  <div class="vbar fb"></div><div class="vbar fb"></div>
-                </div>
-              </div>
-
-              <div class="participant-tile" id="waitingTile">
-                <div class="p-avatar waiting">···</div>
-                <div class="p-info">
-                  <div class="p-name" style="color:var(--muted)">Ждём...</div>
-                  <div class="p-status">скинь ссылку</div>
-                </div>
-              </div>
+            <div class="p-strip">
+              <div class="p-tile" id="myTile"><div class="p-av you" id="myTileAv">ВЫ</div><div class="p-info"><div class="p-name" id="myTileName">Ты</div><div class="p-status live" id="myTileStatus">● в эфире</div></div><div class="viz" id="myViz"><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div><div class="vbar"></div></div></div>
+              <div id="peersContainer"></div>
+              <div class="p-tile" id="waitTile"><div class="p-av wait" style="font-size:16px">···</div><div class="p-info"><div class="p-name" style="color:var(--muted)">Ждём...</div><div class="p-status">скинь ссылку</div></div></div>
             </div>
-
-            <!-- Invite -->
-            <div style="padding: 10px 14px 4px;">
-              <div class="invite-box">
-                <div class="invite-label">Ссылка-приглашение</div>
-                <div class="invite-row">
-                  <input class="invite-url" id="inviteUrl" readonly />
-                  <button class="btn-copy" id="copyBtn" onclick="copyLink()">COPY</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Controls -->
-            <div class="voice-controls">
-              <!-- Mic -->
-              <button class="vc-btn" id="micBtn" onclick="toggleMic()" title="Микрофон">
-                <svg id="micIcon" width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/>
-                  <path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                  <path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                </svg>
-              </button>
-
-
-
-              <!-- Screen share -->
-              <button class="vc-btn" id="shareBtn" onclick="openSharePicker()" title="Демонстрация экрана">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <rect x="2" y="4" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.4"/>
-                  <path d="M6 13l-1.5 3M12 13l1.5 3M5 16h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                  <path d="M7 7.5l2 2 2-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M9 9.5V5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-                </svg>
-              </button>
-
-              <div class="vc-divider"></div>
-              <div class="vc-info">канал <span id="currentRoom">—</span></div>
-              <div class="vc-divider"></div>
-
-
-
-              <!-- Hangup -->
-              <button class="vc-btn vc-hangup" onclick="hangup()" title="Выйти из комнаты">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M2 10.5c0-1.4.6-2.7 1.5-3.6C5.4 5 7.6 4 9 4s3.6 1 5.5 2.9A5 5 0 0116 10.5c0 .8-.4 1.5-1.1 1.9l-1.8 1c-.7.4-1.5.1-1.9-.6L10 11c-.4-.7-.1-1.5.5-1.9.4-.3.5-.7.3-1.1C10 7.2 9.4 7 9 7s-1 .2-1.8.9c-.2.4-.1.8.3 1.1.6.4.9 1.2.5 1.9l-1.2 1.8c-.4.7-1.2 1-1.9.6l-1.8-1C2.4 12 2 11.3 2 10.5z" fill="var(--accent3)" opacity="0.9"/>
-                </svg>
-              </button>
+            <div class="inv-box"><div class="inv-lbl">Ссылка-приглашение</div><div class="inv-row"><input class="inv-url" id="inviteUrl" readonly/><button class="btn-copy" id="copyBtn" onclick="copyLink()">COPY</button></div></div>
+            <div class="vc-ctrl">
+              <button class="cv" id="micBtn" onclick="toggleMic()" title="Микрофон"><svg id="micIcon" width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+              <button class="cv" id="ssBtn" onclick="openSSPicker()" title="Демонстрация экрана"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M6 13l-1.5 3.5M12 13l1.5 3.5M4.5 16.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7 8l2 2 2-2M9 10V6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="vc-div"></div>
+              <div class="vc-inf">канал <span id="currentRoom">—</span></div>
+              <div class="vc-div"></div>
+              <button class="cv cv-hang" onclick="hangup()" title="Выйти"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9.5C2 8.1 2.7 6.9 3.7 6 5.4 4.5 7.4 3.5 9 3.5s3.6 1 5.3 2.5A4.7 4.7 0 0116 9.5c0 .8-.4 1.5-1.1 1.9l-1.7 1c-.7.4-1.5.1-1.9-.6l-1-1.8c-.4-.7-.1-1.5.5-1.9.3-.2.5-.6.3-1C10.3 7.3 9.8 7 9 7s-1.3.3-2.1 1.1c-.2.4 0 .8.3 1 .6.4.9 1.2.5 1.9l-1 1.8c-.4.7-1.2 1-1.9.6L3.1 11.4C2.4 11 2 10.3 2 9.5z" fill="var(--accent3)" opacity=".9"/></svg></button>
             </div>
           </div>
-
-          <!-- Chat panel -->
-          <div class="voice-chat">
-            <div class="voice-chat-head">Чат</div>
-            <div class="voice-chat-msgs" id="chatMsgs"></div>
-            <div class="voice-chat-input-row">
-              <input class="voice-chat-in" id="chatIn" placeholder="Сообщение..." maxlength="300" autocomplete="off" spellcheck="false" />
-              <button class="voice-send-btn" onclick="sendChat()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 14L14 8 2 2v4.5l8 1.5-8 1.5z" fill="white"/></svg>
-              </button>
-            </div>
-          </div>
+          <div class="vc-chat"><div class="vc-chat-head">Чат</div><div class="vc-msgs" id="chatMsgs"></div><div class="vc-inp-row"><input class="vc-in" id="chatIn" placeholder="Сообщение..." maxlength="300" autocomplete="off" spellcheck="false"/><button class="vc-send" onclick="sendChat()"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 13.5L13.5 7.5 2 1.5v4.5l7.5 1.5L2 9z" fill="white"/></svg></button></div></div>
         </div>
       </div>
-
-      <!-- Friends view -->
-      <div id="friendsView" style="display:none;">
-        <div class="friends-header">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="7" cy="6" r="3" stroke="var(--accent)" stroke-width="1.5"/>
-            <path d="M1 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/>
-            <circle cx="14.5" cy="6.5" r="2.5" stroke="var(--text)" stroke-width="1.3"/>
-            <path d="M12 17c0-2.7 1.6-4.5 3-5.2" stroke="var(--text)" stroke-width="1.3" stroke-linecap="round"/>
-          </svg>
-          <span class="friends-header-title">Друзья</span>
-          <div class="friends-tabs">
-            <button class="friends-tab active" id="ftOnline" onclick="switchFriendsTab('online')">Онлайн</button>
-            <button class="friends-tab" id="ftAll" onclick="switchFriendsTab('all')">Все</button>
-            <button class="friends-tab" id="ftPending" onclick="switchFriendsTab('pending')">
-              Заявки<span class="badge" id="ftPendingBadge" style="display:none">0</span>
-            </button>
-          </div>
+      <!-- FRIENDS -->
+      <div id="friendsView">
+        <div class="fv-head"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="6" r="3" stroke="var(--accent)" stroke-width="1.5"/><path d="M1 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/><circle cx="14.5" cy="6.5" r="2.5" stroke="var(--text)" stroke-width="1.3"/><path d="M12 17c0-2.7 1.6-4.5 3-5.2" stroke="var(--text)" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <span class="fv-title">Друзья</span>
+          <div class="fv-tabs"><button class="fv-tab active" id="ftOnline" onclick="setFTab('online')">Онлайн</button><button class="fv-tab" id="ftAll" onclick="setFTab('all')">Все</button><button class="fv-tab" id="ftPending" onclick="setFTab('pending')">Заявки<span class="badge" id="ftBadge" style="display:none">0</span></button></div>
         </div>
-        <div class="friends-add-bar">
-          <input class="friends-add-input" id="friendAddInput" placeholder="Добавить друга по нику: крутой_ник" autocomplete="off" spellcheck="false" />
-          <button class="friends-add-btn" onclick="sendFriendRequest()">Добавить</button>
-        </div>
-        <div class="friends-add-log" id="friendAddLog"></div>
-        <div class="friends-list" id="friendsList"></div>
+        <div class="fv-add"><input class="fv-add-in" id="fAddIn" placeholder="Добавить по нику: kruto_nick" autocomplete="off" spellcheck="false"/><button class="fv-add-btn" onclick="sendFReq()">Добавить</button></div>
+        <div class="fv-log" id="fLog"></div>
+        <div class="fv-list" id="fList"></div>
       </div>
-
-      <!-- DM view -->
-      <div id="dmView" style="display:none;">
-        <div class="dm-header">
-          <div class="dm-header-av" id="dmHeaderAv">??</div>
-          <div>
-            <div class="dm-header-name" id="dmHeaderName">—</div>
-            <div class="dm-header-status" id="dmHeaderStatus">онлайн</div>
-          </div>
-        </div>
+      <!-- DM -->
+      <div id="dmView">
+        <div class="dm-head"><div class="dm-hav" id="dmHAv">??</div><div><div class="dm-hname" id="dmHName">—</div><div class="dm-hstatus" id="dmHStatus">—</div></div></div>
         <div class="dm-msgs" id="dmMsgs"></div>
-        <div class="dm-input-row">
-          <input class="dm-input" id="dmInput" placeholder="Написать сообщение..." maxlength="500" autocomplete="off" spellcheck="false" />
-          <button class="dm-send-btn" onclick="sendDM()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 14L14 8 2 2v4.5l8 1.5-8 1.5z" fill="white"/></svg>
-          </button>
-        </div>
+        <div class="dm-inp-row"><input class="dm-in" id="dmIn" placeholder="Написать сообщение..." maxlength="500" autocomplete="off" spellcheck="false"/><button class="dm-send" onclick="sendDM()"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 13.5L13.5 7.5 2 1.5v4.5l7.5 1.5L2 9z" fill="white"/></svg></button></div>
       </div>
-
-      <!-- Admin view -->
-      <div id="adminView" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-        <div class="friends-header">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M10 2l2.2 4.5L17 7.6l-3.5 3.4.8 4.9L10 13.5l-4.3 2.4.8-4.9L3 7.6l4.8-.7z" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>
-          </svg>
-          <span class="friends-header-title">Админ-панель</span>
-          <button onclick="showView('idle')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;font-family:'Space Mono',monospace">← назад</button>
-        </div>
-        <div style="flex:1;overflow-y:auto;padding:16px 20px;" id="adminPanel"></div>
+      <!-- ADMIN -->
+      <div id="adminView">
+        <div class="adm-head"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2l2.2 4.5 5 .7-3.6 3.5.85 4.95L10 13.3l-4.45 2.35.85-4.95L3 7.2l5-.7z" stroke="#f7c26a" stroke-width="1.4" stroke-linejoin="round" fill="none"/></svg><span class="adm-title">Админ-панель</span></div>
+        <div id="adminPanel"></div>
       </div>
-<div class="modal-overlay hidden" id="shareModal">
-  <div class="modal">
-    <div class="modal-header">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <rect x="2" y="4" width="16" height="10" rx="2" stroke="var(--accent)" stroke-width="1.5"/>
-        <path d="M6 14l-2 4M14 14l2 4M5 18h10" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      <span class="modal-title">Демонстрация экрана</span>
-      <button class="modal-close" onclick="closeShareModal()">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-section-label">Что показывать</div>
-      <div class="share-option-grid">
-        <div class="share-option selected" id="shareOptScreen" onclick="selectShareSource('screen')">
-          <div class="share-option-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect x="2" y="5" width="24" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M9 20l-2 5M19 20l2 5M8 25h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <rect x="6" y="9" width="16" height="7" rx="1" fill="currentColor" opacity="0.15"/>
-            </svg>
-          </div>
-          <div class="share-option-name">Весь экран</div>
-          <div class="share-option-sub">Рабочий стол</div>
-        </div>
-        <div class="share-option" id="shareOptWindow" onclick="selectShareSource('window')">
-          <div class="share-option-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect x="3" y="6" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
-              <rect x="7" y="10" width="18" height="14" rx="2" fill="var(--surface3)" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M7 13h18" stroke="currentColor" stroke-width="1" opacity="0.4"/>
-            </svg>
-          </div>
-          <div class="share-option-name">Окно</div>
-          <div class="share-option-sub">Приложение</div>
-        </div>
-        <div class="share-option" id="shareOptTab" onclick="selectShareSource('tab')">
-          <div class="share-option-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect x="2" y="7" width="24" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M2 11h24" stroke="currentColor" stroke-width="1"/>
-              <rect x="5" y="8" width="7" height="3" rx="1" fill="currentColor" opacity="0.3"/>
-              <path d="M6 15h16M6 18h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
-            </svg>
-          </div>
-          <div class="share-option-name">Вкладка</div>
-          <div class="share-option-sub">Браузер</div>
-        </div>
-      </div>
-
-      <div class="modal-section-label">Качество</div>
-      <div class="modal-quality-row">
-        <div class="quality-btn" id="qBtnAuto" onclick="selectQuality('auto')">
-          <span class="quality-btn-label">Авто</span>
-          <span class="quality-btn-sub">720–1080p</span>
-        </div>
-        <div class="quality-btn selected" id="qBtn720" onclick="selectQuality('720')">
-          <span class="quality-btn-label">720p</span>
-          <span class="quality-btn-sub">30 fps</span>
-        </div>
-        <div class="quality-btn" id="qBtn1080" onclick="selectQuality('1080')">
-          <span class="quality-btn-label">1080p</span>
-          <span class="quality-btn-sub">30 fps</span>
-        </div>
-        <div class="quality-btn" id="qBtnLow" onclick="selectQuality('low')">
-          <span class="quality-btn-label">Низкое</span>
-          <span class="quality-btn-sub">480p</span>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <div class="modal-footer-note">Браузер спросит разрешение на захват</div>
-      <button class="modal-cancel-btn" onclick="closeShareModal()">Отмена</button>
-      <button class="modal-confirm-btn" onclick="startScreenShare()">Начать трансляцию</button>
     </div>
   </div>
 </div>
-
+<!-- Screen share modal -->
+<div class="modal-overlay hidden" id="ssModal">
+  <div class="modal">
+    <div class="modal-head"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="11" rx="2" stroke="var(--accent)" stroke-width="1.5"/><path d="M6 14l-2 4.5M14 14l2 4.5M5 18.5h10" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/></svg><span class="modal-title">Демонстрация экрана</span><button class="modal-x" onclick="closeSSModal()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
+    <div class="modal-body">
+      <div class="modal-slbl">Что показывать</div>
+      <div class="ss-grid">
+        <div class="ss-opt sel" id="ssOptScreen" onclick="setSSOpt('screen')"><div class="ss-opt-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="2" y="5" width="24" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 20l-2 5M19 20l2 5M8 25h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="6" y="9" width="16" height="7" rx="1" fill="currentColor" opacity=".15"/></svg></div><div class="ss-opt-name">Весь экран</div><div class="ss-opt-sub">Рабочий стол</div></div>
+        <div class="ss-opt" id="ssOptWindow" onclick="setSSOpt('window')"><div class="ss-opt-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="6" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="11" width="17" height="13" rx="2" fill="var(--surface3)" stroke="currentColor" stroke-width="1.5"/></svg></div><div class="ss-opt-name">Окно</div><div class="ss-opt-sub">Приложение</div></div>
+        <div class="ss-opt" id="ssOptTab" onclick="setSSOpt('tab')"><div class="ss-opt-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="2" y="6" width="24" height="17" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 11h24" stroke="currentColor" stroke-width="1"/><rect x="5" y="7" width="7" height="4" rx="1" fill="currentColor" opacity=".25"/></svg></div><div class="ss-opt-name">Вкладка</div><div class="ss-opt-sub">Браузер</div></div>
+      </div>
+      <div class="modal-slbl">Качество</div>
+      <div class="q-row">
+        <div class="q-btn" id="qAuto" onclick="setQ('auto')"><span class="q-lbl">Авто</span><span class="q-sub">720–1080p</span></div>
+        <div class="q-btn sel" id="q720" onclick="setQ('720')"><span class="q-lbl">720p</span><span class="q-sub">30 fps</span></div>
+        <div class="q-btn" id="q1080" onclick="setQ('1080')"><span class="q-lbl">1080p</span><span class="q-sub">30 fps</span></div>
+        <div class="q-btn" id="qLow" onclick="setQ('low')"><span class="q-lbl">Низкое</span><span class="q-sub">480p</span></div>
+      </div>
+    </div>
+    <div class="modal-foot"><div class="modal-note">Браузер спросит разрешение</div><button class="modal-cancel" onclick="closeSSModal()">Отмена</button><button class="modal-ok" onclick="startSS()">Начать трансляцию</button></div>
+  </div>
 </div>
-</div>
-</div>
-
 <script>
-var ADMIN_NICK = 'whiteblack';
+firebase.initializeApp({
+  apiKey:"AIzaSyAsE-jtill4Cu7cnijDnrFoXhr2XJQkaDY",
+  authDomain:"dis-russia.firebaseapp.com",
+  databaseURL:"https://dis-russia-default-rtdb.firebaseio.com",
+  projectId:"dis-russia",
+  storageBucket:"dis-russia.firebasestorage.app",
+  messagingSenderId:"551354791433",
+  appId:"1:551354791433:web:fbfdfb5e9adb5b7a25aad8"
+});
+const db=firebase.database();
+const ADMIN='whiteblack';
 
-function getAccounts() { return JSON.parse(localStorage.getItem('void_accounts') || '{}'); }
-function saveAccounts(obj) { localStorage.setItem('void_accounts', JSON.stringify(obj)); }
-function getCurrentUser() { return localStorage.getItem('void_current') || null; }
-function setCurrentUser(nick) { localStorage.setItem('void_current', nick); }
-function getUserData(nick) { return getAccounts()[nick] || null; }
-function saveUserData(nick, data) {
-  var all = getAccounts();
-  all[nick] = Object.assign({}, all[nick] || {}, data);
-  saveAccounts(all);
-}
-
-function hashPass(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return h.toString(36);
-}
-
-function roomToPeerId(room) {
-  // PeerJS: only a-z0-9 and hyphens, no consecutive hyphens, no leading/trailing hyphen
-  return 'voidr' + room.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0, 18);
-}
-
-// ============================================================
-//  FRIENDS & DM  (localStorage inbox — works cross-accounts on same browser)
-// ============================================================
-function getFriends() { return getUserData(currentUser)?.friends || []; }
-function saveFriends(f) { saveUserData(currentUser, { friends: f }); }
-
-function getDMHistory(nick) { return getUserData(currentUser)?.dmHistory?.[nick] || []; }
-function saveDMHistory(nick, history) {
-  const d = getUserData(currentUser) || {};
-  if (!d.dmHistory) d.dmHistory = {};
-  d.dmHistory[nick] = history.slice(-300);
-  saveUserData(currentUser, { dmHistory: d.dmHistory });
-}
-
-// Deliver message to another user's inbox in localStorage
-function deliverLocal(toNick, payload) {
-  const all = getAccounts();
-  if (!all[toNick]) return false;
-  if (!all[toNick].inbox) all[toNick].inbox = [];
-  all[toNick].inbox.push({ ...payload, from: currentUser, ts: Date.now() });
-  saveAccounts(all);
-  return true;
-}
-
-function flushInbox() {
-  if (!currentUser) return;
-  const data = getUserData(currentUser);
-  const inbox = data?.inbox || [];
-  if (!inbox.length) return;
-  saveUserData(currentUser, { inbox: [] });
-  inbox.forEach(handleInboxMsg);
-}
-
-function handleInboxMsg(msg) {
-  if (msg.type === 'friend_req') {
-    const fr = getFriends();
-    if (!fr.find(f => f.nick === msg.from)) {
-      fr.push({ nick: msg.from, status: 'in' });
-      saveFriends(fr);
-    }
-  } else if (msg.type === 'friend_accept') {
-    const fr = getFriends();
-    const e = fr.find(f => f.nick === msg.from);
-    if (e) { e.status = 'friend'; saveFriends(fr); }
-  } else if (msg.type === 'friend_decline') {
-    saveFriends(getFriends().filter(f => f.nick !== msg.from));
-  } else if (msg.type === 'dm') {
-    const h = getDMHistory(msg.from);
-    h.push({ mine: false, text: msg.text, ts: msg.ts });
-    saveDMHistory(msg.from, h);
-    if (currentView === 'dm' && currentDMNick === msg.from) appendDMMsg(msg.from, msg.text, 'theirs');
-    else renderSidebarDMs(); // show unread dot
-  }
-  renderPendingBadge();
-  if (currentView === 'friends') renderFriendsList(friendsTab);
-  renderSidebarDMs();
-}
-
-// ============================================================
-//  AUTH
-// ============================================================
-let currentUser = null;
-
-function switchAuthTab(tab) {
-  document.getElementById('loginForm').style.display = tab === 'login' ? '' : 'none';
-  document.getElementById('regForm').style.display = tab === 'reg' ? '' : 'none';
-  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
-  document.getElementById('tabReg').classList.toggle('active', tab === 'reg');
-  setAuthLog('');
-}
-function setAuthLog(msg, cls='') {
-  const el = document.getElementById('authLog');
-  el.textContent = msg; el.className = 'auth-log ' + cls;
-}
-
-function doRegister() {
-  const nick = document.getElementById('regNick').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
-  const pass = document.getElementById('regPass').value;
-  const pass2 = document.getElementById('regPass2').value;
-  if (!nick || nick.length < 2) { setAuthLog('⚠ ник минимум 2 символа (a-z 0-9 _)', 'err'); return; }
-  if (!pass || pass.length < 4) { setAuthLog('⚠ пароль минимум 4 символа', 'err'); return; }
-  if (pass !== pass2) { setAuthLog('⚠ пароли не совпадают', 'err'); return; }
-  const accounts = getAccounts();
-  if (accounts[nick]) { setAuthLog('⚠ ник занят', 'err'); return; }
-  accounts[nick] = { passHash: hashPass(pass), friends: [], dmHistory: {}, inbox: [], createdAt: Date.now() };
-  saveAccounts(accounts);
-  setAuthLog('✓ аккаунт создан!', 'ok');
-  setTimeout(() => loginAs(nick), 500);
-}
-
-function doLogin() {
-  const nick = document.getElementById('loginNick').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
-  const pass = document.getElementById('loginPass').value;
-  if (!nick || !pass) { setAuthLog('⚠ заполни все поля', 'err'); return; }
-  const accounts = getAccounts();
-  if (!accounts[nick]) { setAuthLog('⚠ аккаунт не найден', 'err'); return; }
-  if (accounts[nick].passHash !== hashPass(pass)) { setAuthLog('⚠ неверный пароль', 'err'); return; }
-  loginAs(nick);
-}
-
-function loginAs(nick) {
-  setCurrentUser(nick);
-  currentUser = nick;
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('appScreen').style.display = 'flex';
-  initApp();
-}
-
-function doLogout() {
-  localStorage.removeItem('void_current');
-  hangup();
-  currentUser = null;
-  document.getElementById('appScreen').style.display = 'none';
-  document.getElementById('authScreen').style.display = 'flex';
-  document.getElementById('loginNick').value = '';
-  document.getElementById('loginPass').value = '';
-  setAuthLog('');
-  renderSavedAccounts();
-}
-
-function renderSavedAccounts() {
-  const accounts = getAccounts();
-  const nicks = Object.keys(accounts);
-  const block = document.getElementById('savedAccountsBlock');
-  const list = document.getElementById('savedAccountsList');
-  if (!nicks.length) { block.classList.remove('show'); return; }
-  block.classList.add('show');
-  list.innerHTML = '';
-  nicks.forEach(nick => {
-    const div = document.createElement('div');
-    div.className = 'saved-account';
-    div.onclick = () => { document.getElementById('loginNick').value = nick; switchAuthTab('login'); document.getElementById('loginPass').focus(); };
-    div.innerHTML = `<div class="saved-av">${nick.slice(0,2).toUpperCase()}</div>
-      <div class="saved-name">${esc(nick)}</div>
-      <div class="saved-tag">${nick === ADMIN_NICK ? '👑 admin' : 'нажми для входа'}</div>`;
-    list.appendChild(div);
-  });
-}
-
-// ============================================================
-//  APP INIT
-// ============================================================
-function initApp() {
-  myNick = currentUser;
-  document.getElementById('sidebarMyAv').textContent = myNick.slice(0,2).toUpperCase();
-  document.getElementById('sidebarMyName').textContent = '@' + myNick;
-  document.getElementById('myTileAv').textContent = myNick.slice(0,2).toUpperCase();
-  document.getElementById('myTileName').textContent = myNick;
-
-  // Admin badge in sidebar
-  if (myNick === ADMIN_NICK) {
-    document.getElementById('sidebarMyName').innerHTML = '@' + myNick + ' <span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace;">ADMIN</span>';
-  }
-
-  flushInbox();
-  setInterval(flushInbox, 2000);
-  markOnline();
-  setInterval(markOnline, 15000);
-  setInterval(renderSidebarDMs, 8000);
-
-  renderSidebarDMs();
-  renderPendingBadge();
-
-  // Show admin button if admin
-  if (myNick === ADMIN_NICK) {
-    let adminBtn = document.getElementById('adminSidebarBtn');
-    if (!adminBtn) {
-      adminBtn = document.createElement('div');
-      adminBtn.id = 'adminSidebarBtn';
-      adminBtn.className = 'sidebar-item';
-      adminBtn.onclick = () => showView('admin');
-      adminBtn.innerHTML = `<div class="sidebar-item-icon" style="background:rgba(247,194,106,0.12)">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 3 3.5.5-2.5 2.5.5 3.5L7 9l-3 1.5.5-3.5L2 4.5l3.5-.5z" stroke="#f7c26a" stroke-width="1.2" fill="none"/></svg>
-      </div>
-      <span class="sidebar-item-name" style="color:#f7c26a">Админ панель</span>`;
-      document.getElementById('sidebarRooms').parentNode.insertBefore(adminBtn, document.getElementById('sidebarRooms').parentNode.querySelector('.sidebar-user'));
-    }
-  }
-
-  showView('idle');
-}
-
-function markOnline() {
-  if (!currentUser) return;
-  saveUserData(currentUser, { lastSeen: Date.now() });
-}
-function isOnline(nick) {
-  const d = getUserData(nick);
-  return d?.lastSeen && (Date.now() - d.lastSeen) < 40000;
-}
-
-// ============================================================
-//  VIEWS
-// ============================================================
-let currentView = '';
-let currentDMNick = '';
-
-function showView(view, extra) {
-  // Add admin view to list
-  ['idleView','voiceView','friendsView','dmView','adminView'].forEach(v => {
-    const el = document.getElementById(v);
-    if (el) { el.style.display = 'none'; el.style.flex = ''; }
-  });
-  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-
-  if (view === 'idle') {
-    const el = document.getElementById('idleView');
-    el.style.display = 'flex'; el.style.flex = '1';
-    currentView = 'idle';
-  } else if (view === 'voice') {
-    const el = document.getElementById('voiceView');
-    el.style.display = 'flex'; el.style.flex = '1';
-    currentView = 'voice';
-  } else if (view === 'friends') {
-    const el = document.getElementById('friendsView');
-    el.style.display = 'flex'; el.style.flex = '1';
-    currentView = 'friends';
-    renderFriendsList('online');
-  } else if (view === 'dm') {
-    const el = document.getElementById('dmView');
-    el.style.display = 'flex'; el.style.flex = '1';
-    currentDMNick = extra;
-    currentView = 'dm';
-    openDM(extra);
-  } else if (view === 'admin') {
-    const el = document.getElementById('adminView');
-    if (el) { el.style.display = 'flex'; el.style.flex = '1'; }
-    currentView = 'admin';
-    renderAdminPanel();
-    document.getElementById('adminSidebarBtn')?.classList.add('active');
-  }
-}
-
-// ============================================================
-//  FRIENDS
-// ============================================================
-let friendsTab = 'online';
-
-function switchFriendsTab(tab) {
-  friendsTab = tab;
-  ['online','all','pending'].forEach(t => {
-    document.getElementById('ft' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.toggle('active', t === tab);
-  });
-  renderFriendsList(tab);
-}
-
-function sendFriendRequest() {
-  const input = document.getElementById('friendAddInput');
-  const target = input.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
-  const setLog = (msg, cls='') => {
-    const el = document.getElementById('friendAddLog');
-    el.textContent = msg; el.className = 'friends-add-log ' + cls;
-  };
-
-  if (!target) { setLog('⚠ введи ник', 'err'); return; }
-  if (target === currentUser) { setLog('⚠ нельзя добавить себя', 'err'); return; }
-
-  const accounts = getAccounts();
-  if (!accounts[target]) {
-    setLog('⚠ @' + target + ' не найден — пользователь должен зарегистрироваться на этом же сайте и в том же браузере', 'err');
-    return;
-  }
-
-  const fr = getFriends();
-  const ex = fr.find(f => f.nick === target);
-  if (ex?.status === 'friend') { setLog('⚠ уже друзья', 'err'); return; }
-  if (ex?.status === 'out') { setLog('⚠ заявка уже отправлена', 'err'); return; }
-  if (ex?.status === 'in') {
-    acceptFriend(target);
-    setLog('✓ взаимная заявка — теперь вы друзья!', 'ok');
-    input.value = '';
-    return;
-  }
-
-  fr.push({ nick: target, status: 'out' });
-  saveFriends(fr);
-  deliverLocal(target, { type: 'friend_req' });
-  input.value = '';
-  setLog('✓ заявка отправлена @' + target, 'ok');
-  renderFriendsList(friendsTab);
-}
-
-function acceptFriend(nick) {
-  const fr = getFriends();
-  const e = fr.find(f => f.nick === nick);
-  if (e) e.status = 'friend';
-  saveFriends(fr);
-  deliverLocal(nick, { type: 'friend_accept' });
-  renderFriendsList(friendsTab);
-  renderSidebarDMs();
-  renderPendingBadge();
-}
-
-function declineFriend(nick) {
-  saveFriends(getFriends().filter(f => f.nick !== nick));
-  deliverLocal(nick, { type: 'friend_decline' });
-  renderFriendsList(friendsTab);
-  renderPendingBadge();
-}
-
-function removeFriend(nick) {
-  saveFriends(getFriends().filter(f => f.nick !== nick));
-  renderFriendsList(friendsTab);
-  renderSidebarDMs();
-}
-
-function renderPendingBadge() {
-  const n = getFriends().filter(f => f.status === 'in').length;
-  ['pendingBadge','ftPendingBadge'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.display = n > 0 ? '' : 'none';
-    el.textContent = n;
-  });
-}
-
-function renderFriendsList(tab) {
-  const list = document.getElementById('friendsList');
-  if (!list) return;
-  list.innerHTML = '';
-  const fr = getFriends();
-  let items = tab === 'online' ? fr.filter(f => f.status === 'friend' && isOnline(f.nick))
-            : tab === 'all'    ? fr.filter(f => f.status === 'friend')
-            : fr.filter(f => f.status === 'in' || f.status === 'out');
-
-  if (!items.length) {
-    list.innerHTML = `<div class="empty-state">
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <circle cx="18" cy="16" r="7" stroke="currentColor" stroke-width="1.8"/>
-        <path d="M4 40c0-7.7 6.3-14 14-14s14 6.3 14 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        <circle cx="34" cy="18" r="5" stroke="currentColor" stroke-width="1.8"/>
-        <path d="M31 40c0-5 2.5-8.5 5-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-      <div class="empty-state-text">${tab==='pending' ? 'нет заявок' : tab==='online' ? 'никого нет онлайн' : 'нет друзей'}</div>
-    </div>`;
-    return;
-  }
-
-  items.forEach(f => {
-    const online = isOnline(f.nick);
-    const isPending = f.status === 'in' || f.status === 'out';
-    const div = document.createElement('div');
-    div.className = 'friend-row';
-    div.innerHTML = `
-      <div class="friend-av ${isPending ? 'pending' : online ? 'online' : 'offline'}">
-        ${f.nick.slice(0,2).toUpperCase()}
-        ${!isPending ? `<div class="friend-av-status ${online ? 'online' : 'offline'}"></div>` : ''}
-      </div>
-      <div class="friend-info">
-        <div class="friend-name">@${esc(f.nick)}</div>
-        <div class="friend-sub">${f.status==='in' ? 'входящая заявка' : f.status==='out' ? 'заявка отправлена' : online ? 'онлайн' : 'не в сети'}</div>
-      </div>
-      <div class="friend-actions" id="fa_${f.nick}"></div>`;
-    const acts = div.querySelector('.friend-actions');
-    if (f.status === 'in') {
-      acts.innerHTML = `
-        <button class="friend-action-btn accept" onclick="acceptFriend('${f.nick}')" title="Принять">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5 6.5-7" stroke="var(--accent2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="friend-action-btn decline" onclick="declineFriend('${f.nick}')" title="Отклонить">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="var(--accent3)" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>`;
-    } else if (f.status === 'friend') {
-      acts.innerHTML = `
-        <button class="friend-action-btn msg" onclick="showView('dm','${f.nick}')" title="Написать">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3 2V3a1 1 0 011-1z" stroke="var(--accent)" stroke-width="1.2"/></svg>
-        </button>
-        <button class="friend-action-btn decline" onclick="removeFriend('${f.nick}')" title="Удалить">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>`;
-    }
-    list.appendChild(div);
-  });
-  renderPendingBadge();
-}
-
-// ============================================================
-//  DM
-// ============================================================
-function openDM(nick) {
-  document.getElementById('dmHeaderAv').textContent = nick.slice(0,2).toUpperCase();
-  document.getElementById('dmHeaderName').textContent = '@' + nick;
-  document.getElementById('dmHeaderStatus').textContent = isOnline(nick) ? 'онлайн' : 'не в сети';
-  const msgs = document.getElementById('dmMsgs');
-  msgs.innerHTML = '';
-  const history = getDMHistory(nick);
-  if (!history.length) {
-    msgs.innerHTML = `<div style="text-align:center;padding:32px;font-family:Space Mono,monospace;font-size:12px;color:var(--muted)">начало переписки с @${esc(nick)}</div>`;
-  }
-  history.forEach(m => appendDMMsg(m.mine ? currentUser : nick, m.text, m.mine ? 'mine' : 'theirs'));
-  msgs.scrollTop = 99999;
-  document.querySelectorAll('.sidebar-dm-item').forEach(i => i.classList.toggle('active', i.dataset.nick === nick));
-}
-
-function appendDMMsg(nick, text, side) {
-  const msgs = document.getElementById('dmMsgs');
-  const empty = msgs.querySelector('[style*="text-align:center"]');
-  if (empty) empty.remove();
-  const div = document.createElement('div');
-  div.className = 'msg';
-  div.innerHTML = `<div class="msg-av ${side}">${nick.slice(0,2).toUpperCase()}</div>
-    <div class="msg-body"><div class="msg-nick ${side}">@${esc(nick)}</div><div class="msg-text">${esc(text)}</div></div>`;
-  msgs.appendChild(div);
-  msgs.scrollTop = 99999;
-}
-
-function sendDM() {
-  const input = document.getElementById('dmInput');
-  const text = input.value.trim();
-  if (!text || !currentDMNick) return;
-  input.value = '';
-  const ts = Date.now();
-  const h = getDMHistory(currentDMNick);
-  h.push({ mine: true, text, ts });
-  saveDMHistory(currentDMNick, h);
-  deliverLocal(currentDMNick, { type: 'dm', text, ts });
-  appendDMMsg(currentUser, text, 'mine');
-}
-
-function renderSidebarDMs() {
-  const container = document.getElementById('sidebarDMs');
-  if (!container) return;
-  container.innerHTML = '';
-  getFriends().filter(f => f.status === 'friend').forEach(f => {
-    const div = document.createElement('div');
-    div.className = 'sidebar-item sidebar-dm-item';
-    div.dataset.nick = f.nick;
-    div.onclick = () => showView('dm', f.nick);
-    if (currentView === 'dm' && currentDMNick === f.nick) div.classList.add('active');
-    div.innerHTML = `
-      <div class="sidebar-item-icon dm">${f.nick.slice(0,2).toUpperCase()}</div>
-      <span class="sidebar-item-name">@${esc(f.nick)}</span>
-      <div class="sidebar-online-dot ${isOnline(f.nick) ? 'online' : 'offline'}"></div>`;
-    container.appendChild(div);
-  });
-}
-
-// ============================================================
-//  ADMIN PANEL
-// ============================================================
-function renderAdminPanel() {
-  const panel = document.getElementById('adminPanel');
-  if (!panel || currentUser !== ADMIN_NICK) return;
-  const accounts = getAccounts();
-  const nicks = Object.keys(accounts);
-  const onlineCount = nicks.filter(n => isOnline(n)).length;
-  const bannedCount = nicks.filter(n => accounts[n] && accounts[n].banned).length;
-
-  let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">';
-  html += adminStat('Аккаунтов', nicks.length, 'var(--accent)');
-  html += adminStat('Онлайн', onlineCount, 'var(--accent2)');
-  html += adminStat('Забанено', bannedCount, 'var(--accent3)');
-  html += '</div>';
-  html += '<div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Пользователи</div>';
-  html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-
-  nicks.forEach(function(nick) {
-    const a = accounts[nick] || {};
-    const online = isOnline(nick);
-    const banned = !!a.banned;
-    const isAdm = nick === ADMIN_NICK;
-    const friends = (a.friends||[]).filter(f => f.status==='friend').length;
-    const created = a.createdAt ? new Date(a.createdAt).toLocaleDateString('ru') : '—';
-    const borderColor = banned ? 'rgba(247,106,138,0.2)' : isAdm ? 'rgba(247,194,106,0.25)' : 'var(--border)';
-    const avBg = isAdm ? 'rgba(247,194,106,0.15)' : banned ? 'rgba(247,106,138,0.1)' : 'rgba(124,106,247,0.12)';
-    const avColor = isAdm ? '#f7c26a' : banned ? 'var(--accent3)' : 'var(--accent)';
-    const avBorder = isAdm ? 'rgba(247,194,106,0.3)' : banned ? 'rgba(247,106,138,0.3)' : 'rgba(124,106,247,0.3)';
-
-    html += '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface2);border:1px solid ' + borderColor + ';border-radius:10px;opacity:' + (banned ? '0.65' : '1') + ';">';
-    html += '<div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Space Mono,monospace;font-size:11px;font-weight:700;flex-shrink:0;background:' + avBg + ';color:' + avColor + ';border:1px solid ' + avBorder + ';">' + nick.slice(0,2).toUpperCase() + '</div>';
-    html += '<div style="flex:1;min-width:0;">';
-    html += '<div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;">@' + esc(nick);
-    if (isAdm) html += ' <span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace">ADMIN</span>';
-    if (banned) html += ' <span style="font-size:9px;color:var(--accent3);background:rgba(247,106,138,0.08);border:1px solid rgba(247,106,138,0.2);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace">БАН</span>';
-    html += '</div>';
-    html += '<div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);margin-top:2px;">';
-    html += (online ? '<span style="color:var(--accent2)">● онлайн</span>' : '○ оффлайн') + ' &nbsp;·&nbsp; друзей: ' + friends + ' &nbsp;·&nbsp; зарег: ' + created;
-    html += '</div></div>';
-    if (!isAdm) {
-      const banBorder = banned ? 'rgba(79,200,168,0.3)' : 'rgba(247,106,138,0.3)';
-      const banBg = banned ? 'rgba(79,200,168,0.08)' : 'rgba(247,106,138,0.08)';
-      const banColor = banned ? 'var(--accent2)' : 'var(--accent3)';
-      const banText = banned ? 'Разбан' : 'Бан';
-      html += '<div style="display:flex;gap:6px;">';
-      html += '<button onclick="adminBan(\''+nick+'\')"  style="padding:5px 10px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid '+banBorder+';background:'+banBg+';color:'+banColor+';">'+banText+'</button>';
-      html += '<button onclick="adminDelete(\''+nick+'\')" style="padding:5px 10px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid var(--border);background:transparent;color:var(--muted);">Удалить</button>';
-      html += '</div>';
-    }
-    html += '</div>';
-  });
-
-  html += '</div>';
-  html += '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">';
-  html += '<div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Опасная зона</div>';
-  html += '<button onclick="adminClearAll()" style="padding:9px 16px;border-radius:8px;border:1px solid rgba(247,106,138,0.3);background:rgba(247,106,138,0.08);color:var(--accent3);font-family:Syne,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">Удалить все аккаунты кроме своего</button>';
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-function adminStat(label, value, color) {
-  return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">'
-    + '<div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">' + label + '</div>'
-    + '<div style="font-size:26px;font-weight:800;color:' + color + '">' + value + '</div>'
-    + '</div>';
-}
-function adminBan(nick) {
-  if (nick === ADMIN_NICK) return;
-  const all = getAccounts();
-  if (!all[nick]) return;
-  all[nick].banned = !all[nick].banned;
-  saveAccounts(all);
-  renderAdminPanel();
-}
-function adminDelete(nick) {
-  if (nick === ADMIN_NICK) return;
-  if (!confirm('Удалить аккаунт @' + nick + '?')) return;
-  const all = getAccounts();
-  delete all[nick];
-  saveAccounts(all);
-  renderAdminPanel();
-}
-function adminClearAll() {
-  if (!confirm('Удалить ВСЕ аккаунты кроме своего?')) return;
-  const all = getAccounts();
-  const mine = all[currentUser];
-  const fresh = {};
-  fresh[currentUser] = mine;
-  saveAccounts(fresh);
-  renderAdminPanel();
-}
-
-// ============================================================
-//  VOICE CHAT
-// ============================================================
-const PEER_CONFIG = {
-  host: '0.peerjs.com', port: 443, path: '/', secure: true,
-  config: { iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
+// PeerJS config with fallback servers (ru-friendly STUN/TURN)
+const PC={
+  host:'0.peerjs.com',port:443,path:'/',secure:true,
+  debug:0,
+  config:{iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun.ekiga.net'},
+    {urls:'stun:stun.ideasip.com'},
+    {urls:'stun:stun.schlund.de'},
+    {urls:'stun:stun.voiparound.com'},
+    {urls:'stun:stun.voipbuster.com'},
+    {urls:'stun:stun.voipstunt.com'},
+    // Metered free TURN (works from Russia)
+    {urls:'turn:a.relay.metered.ca:80',username:'free',credential:'free'},
+    {urls:'turn:a.relay.metered.ca:443',username:'free',credential:'free'},
+    {urls:'turn:a.relay.metered.ca:443?transport=tcp',username:'free',credential:'free'}
   ]}
 };
 
-let myPeer = null, mediaConn = null, screenConn = null, dataConn = null;
-let guestPeerId = null;
-let localStream = null, screenStream = null;
-let isMuted = false, isHost = false;
-let myNick = '';
-let friendNick = 'друг';
-let room = '';
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function hp(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return h.toString(36);}
+function r2p(r){return 'voidr'+r.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,18);}
+function ns(n){return n.replace(/[.#$[\]]/g,'_');}
 
-function setIdleLog(msg, cls='') {
-  const el = document.getElementById('idleLog');
-  el.textContent = msg; el.className = 'idle-log ' + cls;
+// ── AUTH ───────────────────────────────────────────────────
+let CU=null,MN='';
+function switchTab(t){
+  document.getElementById('loginForm').style.display=t==='login'?'':'none';
+  document.getElementById('regForm').style.display=t==='reg'?'':'none';
+  document.getElementById('tabLogin').classList.toggle('active',t==='login');
+  document.getElementById('tabReg').classList.toggle('active',t==='reg');
+  setAL('');
+}
+function setAL(m,c){const e=document.getElementById('authLog');e.textContent=m;e.className='auth-log '+(c||'');}
+async function doRegister(){
+  const nick=document.getElementById('regNick').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  const p=document.getElementById('regPass').value,p2=document.getElementById('regPass2').value;
+  if(nick.length<2){setAL('⚠ ник минимум 2 символа','err');return;}
+  if(p.length<4){setAL('⚠ пароль минимум 4 символа','err');return;}
+  if(p!==p2){setAL('⚠ пароли не совпадают','err');return;}
+  setAL('— проверяем ник —');
+  const s=await db.ref('users/'+ns(nick)).get();
+  if(s.exists()){setAL('⚠ ник уже занят','err');return;}
+  await db.ref('users/'+ns(nick)).set({passHash:hp(p),createdAt:Date.now()});
+  addSaved(nick);setAL('✓ аккаунт создан!','ok');
+  setTimeout(()=>loginAs(nick),400);
+}
+async function doLogin(){
+  const nick=document.getElementById('loginNick').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  const p=document.getElementById('loginPass').value;
+  if(!nick||!p){setAL('⚠ заполни все поля','err');return;}
+  setAL('— входим —');
+  const s=await db.ref('users/'+ns(nick)).get();
+  if(!s.exists()){setAL('⚠ аккаунт не найден','err');return;}
+  const d=s.val();
+  if(d.passHash!==hp(p)){setAL('⚠ неверный пароль','err');return;}
+  if(d.banned){setAL('⚠ аккаунт заблокирован','err');return;}
+  addSaved(nick);loginAs(nick);
+}
+function addSaved(nick){
+  const s=JSON.parse(localStorage.getItem('void_saved')||'[]');
+  if(!s.includes(nick)){s.push(nick);localStorage.setItem('void_saved',JSON.stringify(s));}
+}
+function loginAs(nick){
+  CU=nick;MN=nick;
+  localStorage.setItem('void_current',nick);
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('appScreen').style.display='flex';
+  initApp();
+}
+function doLogout(){
+  if(CU)db.ref('presence/'+ns(CU)).remove();
+  hangup();CU=null;MN='';
+  localStorage.removeItem('void_current');
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('authScreen').style.display='flex';
+  document.getElementById('loginNick').value='';
+  document.getElementById('loginPass').value='';
+  setAL('');renderSaved();
+}
+function renderSaved(){
+  const saved=JSON.parse(localStorage.getItem('void_saved')||'[]');
+  const bl=document.getElementById('savedList'),li=document.getElementById('savedAccs');
+  if(!saved.length){bl.classList.remove('show');return;}
+  bl.classList.add('show');li.innerHTML='';
+  saved.forEach(nick=>{
+    const d=document.createElement('div');d.className='saved-acc';
+    d.onclick=()=>{document.getElementById('loginNick').value=nick;switchTab('login');document.getElementById('loginPass').focus();};
+    d.innerHTML='<div class="saved-av">'+nick.slice(0,2).toUpperCase()+'</div>'
+      +'<div class="saved-name">'+esc(nick)+'</div>'
+      +'<div class="saved-hint">'+(nick===ADMIN?'👑 admin':'нажми для входа')+'</div>';
+    li.appendChild(d);
+  });
 }
 
-function randRoom() {
-  const w = ['echo','nova','orbit','delta','sigma','pulse','flux','relay','vortex','zenith'];
-  return w[Math.floor(Math.random()*w.length)] + Math.floor(100+Math.random()*900);
+// ── APP INIT ───────────────────────────────────────────────
+let presRef=null,fListener=null,dmListeners={};
+function initApp(){
+  document.getElementById('sbMyAv').textContent=MN.slice(0,2).toUpperCase();
+  document.getElementById('myTileAv').textContent=MN.slice(0,2).toUpperCase();
+  document.getElementById('myTileName').textContent=MN;
+  if(MN===ADMIN){
+    document.getElementById('sbMyName').innerHTML='@'+MN+' <span class="badge-adm">ADMIN</span>';
+    if(!document.getElementById('adminSbBtn')){
+      const b=document.createElement('div');b.id='adminSbBtn';b.className='sb-item';
+      b.onclick=()=>showView('admin');
+      b.innerHTML='<div class="sb-icon" style="background:rgba(247,194,106,.12)"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5l1.5 3 3.5.5-2.5 2.5.5 3.2-3-1.6-3 1.6.5-3.2-2.5-2.5 3.5-.5z" stroke="#f7c26a" stroke-width="1.1" fill="none" stroke-linejoin="round"/></svg></div><span class="sb-name" style="color:#f7c26a">Админ-панель</span>';
+      document.querySelector('.sb-user').parentNode.insertBefore(b,document.querySelector('.sb-user'));
+    }
+  } else {
+    document.getElementById('sbMyName').textContent='@'+MN;
+  }
+  presRef=db.ref('presence/'+ns(MN));
+  presRef.set({online:true,ts:Date.now()});
+  presRef.onDisconnect().remove();
+  setInterval(()=>{if(CU)presRef.set({online:true,ts:Date.now()});},20000);
+  listenFriends();renderSidebarDMs();renderPendingBadge();
+  showView('idle');
 }
 
-function createRoom() {
-  document.getElementById('roomInput').value = randRoom();
-  joinRoom();
+// ── VIEWS ──────────────────────────────────────────────────
+let CV='',CDN='';
+function showView(v,extra){
+  ['idleView','voiceView','friendsView','dmView','adminView'].forEach(id=>{
+    const e=document.getElementById(id);if(e){e.style.display='none';e.style.flex='';}
+  });
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  const show=id=>{const e=document.getElementById(id);e.style.display='flex';e.style.flex='1';};
+  if(v==='idle'){show('idleView');CV='idle';}
+  else if(v==='voice'){show('voiceView');CV='voice';}
+  else if(v==='friends'){show('friendsView');CV='friends';renderFList(fTab);}
+  else if(v==='dm'){show('dmView');CDN=extra;CV='dm';openDM(extra);}
+  else if(v==='admin'&&MN===ADMIN){show('adminView');CV='admin';renderAdmin();document.getElementById('adminSbBtn')?.classList.add('active');}
 }
 
-async function joinRoom() {
-  const raw = document.getElementById('roomInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
-  room = raw.substring(0, 22);
-  if (!room) { setIdleLog('⚠ введи название комнаты', 'err'); return; }
+// ── PRESENCE ───────────────────────────────────────────────
+async function isOn(nick){
+  const s=await db.ref('presence/'+ns(nick)).get();
+  if(!s.exists())return false;
+  const d=s.val();return d.online&&(Date.now()-d.ts)<45000;
+}
 
-  // Check ban
-  const data = getUserData(currentUser);
-  if (data?.banned) { setIdleLog('❌ аккаунт заблокирован', 'err'); return; }
+// ── FRIENDS ────────────────────────────────────────────────
+let fTab='online';
+function listenFriends(){
+  if(fListener)db.ref('friends/'+ns(MN)).off('value',fListener);
+  fListener=db.ref('friends/'+ns(MN)).on('value',()=>{
+    renderPendingBadge();renderSidebarDMs();
+    if(CV==='friends')renderFList(fTab);
+  });
+}
+function setFTab(t){
+  fTab=t;
+  ['online','all','pending'].forEach(x=>{
+    document.getElementById('ft'+x.charAt(0).toUpperCase()+x.slice(1))?.classList.toggle('active',x===t);
+  });
+  renderFList(t);
+}
+async function sendFReq(){
+  const inp=document.getElementById('fAddIn');
+  const target=inp.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  const setLog=(m,c)=>{const e=document.getElementById('fLog');e.textContent=m;e.className='fv-log '+(c||'');};
+  if(!target){setLog('⚠ введи ник','err');return;}
+  if(target===MN){setLog('⚠ нельзя добавить себя','err');return;}
+  const us=await db.ref('users/'+ns(target)).get();
+  if(!us.exists()){setLog('⚠ @'+target+' не найден','err');return;}
+  const ms=await db.ref('friends/'+ns(MN)+'/'+ns(target)).get();
+  if(ms.exists()){
+    const st=ms.val().status;
+    if(st==='friend'){setLog('⚠ уже друзья','err');return;}
+    if(st==='out'){setLog('⚠ заявка уже отправлена','err');return;}
+    if(st==='in'){await acceptFriend(target);setLog('✓ взаимная — теперь вы друзья!','ok');inp.value='';return;}
+  }
+  await db.ref('friends/'+ns(MN)+'/'+ns(target)).set({status:'out',ts:Date.now()});
+  await db.ref('friends/'+ns(target)+'/'+ns(MN)).set({status:'in',ts:Date.now()});
+  inp.value='';setLog('✓ заявка отправлена @'+target,'ok');
+}
+async function acceptFriend(nick){
+  await db.ref('friends/'+ns(MN)+'/'+ns(nick)).set({status:'friend',ts:Date.now()});
+  await db.ref('friends/'+ns(nick)+'/'+ns(MN)).set({status:'friend',ts:Date.now()});
+  renderFList(fTab);renderSidebarDMs();renderPendingBadge();
+}
+async function declineFriend(nick){
+  await db.ref('friends/'+ns(MN)+'/'+ns(nick)).remove();
+  await db.ref('friends/'+ns(nick)+'/'+ns(MN)).remove();
+  renderFList(fTab);renderPendingBadge();
+}
+async function removeFriend(nick){
+  await db.ref('friends/'+ns(MN)+'/'+ns(nick)).remove();
+  await db.ref('friends/'+ns(nick)+'/'+ns(MN)).remove();
+  renderFList(fTab);renderSidebarDMs();
+}
+async function renderPendingBadge(){
+  const s=await db.ref('friends/'+ns(MN)).get();
+  let n=0;if(s.exists())s.forEach(c=>{if(c.val().status==='in')n++;});
+  ['pendingBadge','ftBadge'].forEach(id=>{
+    const e=document.getElementById(id);if(!e)return;
+    e.style.display=n>0?'':'none';e.textContent=n;
+  });
+}
+async function renderFList(tab){
+  const list=document.getElementById('fList');if(!list)return;
+  list.innerHTML='<div style="padding:16px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">загружаем...</div>';
+  const snap=await db.ref('friends/'+ns(MN)).get();
+  const friends=[];
+  if(snap.exists())snap.forEach(c=>friends.push({key:c.key,...c.val()}));
+  let items=tab==='pending'
+    ?friends.filter(f=>f.status==='in'||f.status==='out')
+    :friends.filter(f=>f.status==='friend');
+  const onMap={};
+  await Promise.all(items.map(async f=>{onMap[f.key]=await isOn(f.key);}));
+  if(tab==='online')items=items.filter(f=>onMap[f.key]);
+  list.innerHTML='';
+  if(!items.length){
+    const txt=tab==='pending'?'нет заявок':tab==='online'?'никого нет онлайн':'нет друзей';
+    list.innerHTML='<div class="empty"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="18" cy="16" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M4 40c0-7.7 6.3-14 14-14s14 6.3 14 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><div class="empty-txt">'+txt+'</div></div>';
+    return;
+  }
+  items.forEach(f=>{
+    const on=onMap[f.key],ip=f.status==='in'||f.status==='out';
+    const ac=ip?'pending':(on?'online':'offline');
+    const sub=f.status==='in'?'входящая заявка':f.status==='out'?'заявка отправлена':(on?'онлайн':'не в сети');
+    const div=document.createElement('div');div.className='f-row';
+    div.innerHTML='<div class="f-av '+ac+'">'+f.key.slice(0,2).toUpperCase()+(!ip?'<div class="f-av-dot '+(on?'on':'off')+'"></div>':'')+'</div>'
+      +'<div class="f-info"><div class="f-name">@'+esc(f.key)+'</div><div class="f-sub">'+sub+'</div></div>'
+      +'<div class="f-acts" id="fa_'+f.key+'"></div>';
+    const acts=div.querySelector('.f-acts');
+    if(f.status==='in'){
+      acts.innerHTML='<button class="f-btn acc" onclick="acceptFriend(\''+f.key+'\')" title="Принять"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5 6.5-7" stroke="var(--accent2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
+        +'<button class="f-btn dec" onclick="declineFriend(\''+f.key+'\')" title="Отклонить"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="var(--accent3)" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
+    }else if(f.status==='friend'){
+      acts.innerHTML='<button class="f-btn msg" onclick="showView(\'dm\',\''+f.key+'\')" title="Написать"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h10a1 1 0 011 1v6a1 1 0 01-1 1H5l-3 2V3a1 1 0 011-1z" stroke="var(--accent)" stroke-width="1.2"/></svg></button>'
+        +'<button class="f-btn dec" onclick="removeFriend(\''+f.key+'\')" title="Удалить"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
+    }
+    list.appendChild(div);
+  });
+}
+async function renderSidebarDMs(){
+  const c=document.getElementById('sbDMs');if(!c)return;
+  c.innerHTML='';
+  const s=await db.ref('friends/'+ns(MN)).get();
+  if(!s.exists())return;
+  s.forEach(ch=>{
+    if(ch.val().status!=='friend')return;
+    const nick=ch.key;
+    const div=document.createElement('div');div.className='sb-item';div.dataset.nick=nick;
+    div.onclick=()=>showView('dm',nick);
+    if(CV==='dm'&&CDN===nick)div.classList.add('active');
+    div.innerHTML='<div class="sb-icon dm">'+nick.slice(0,2).toUpperCase()+'</div>'
+      +'<span class="sb-name">@'+esc(nick)+'</span>'
+      +'<div class="sb-dot off" id="dot_'+nick+'"></div>';
+    c.appendChild(div);
+    isOn(nick).then(on=>{const d=document.getElementById('dot_'+nick);if(d)d.className='sb-dot '+(on?'':'off');});
+  });
+}
 
+// ── DM ─────────────────────────────────────────────────────
+function dmKey(a,b){return [ns(a),ns(b)].sort().join('__');}
+function openDM(nick){
+  document.getElementById('dmHAv').textContent=nick.slice(0,2).toUpperCase();
+  document.getElementById('dmHName').textContent='@'+nick;
+  document.getElementById('dmHStatus').textContent='...';
+  isOn(nick).then(on=>document.getElementById('dmHStatus').textContent=on?'онлайн':'не в сети');
+  const msgs=document.getElementById('dmMsgs');msgs.innerHTML='';
+  if(dmListeners[nick])db.ref('dms/'+dmKey(MN,nick)).off('child_added',dmListeners[nick]);
+  let first=true;
+  const ref=db.ref('dms/'+dmKey(MN,nick));
+  dmListeners[nick]=ref.limitToLast(100).on('child_added',s=>{
+    const m=s.val();
+    appendDMMsg(m.from,m.text,m.from===MN?'mine':'theirs');
+    if(!first)msgs.scrollTop=99999;
+  });
+  setTimeout(()=>{msgs.scrollTop=99999;first=false;},300);
+}
+async function sendDM(){
+  const inp=document.getElementById('dmIn');const text=inp.value.trim();
+  if(!text||!CDN)return;inp.value='';
+  await db.ref('dms/'+dmKey(MN,CDN)).push({from:MN,text,ts:Date.now()});
+}
+function appendDMMsg(nick,text,side){
+  const msgs=document.getElementById('dmMsgs');
+  const div=document.createElement('div');div.className='msg';
+  div.innerHTML='<div class="msg-av '+side+'">'+nick.slice(0,2).toUpperCase()+'</div>'
+    +'<div class="msg-body"><div class="msg-nick '+side+'">@'+esc(nick)+'</div><div class="msg-text">'+esc(text)+'</div></div>';
+  msgs.appendChild(div);msgs.scrollTop=99999;
+}
+
+// ── ADMIN ──────────────────────────────────────────────────
+async function renderAdmin(){
+  const panel=document.getElementById('adminPanel');if(!panel||MN!==ADMIN)return;
+  panel.innerHTML='<div style="padding:16px;font-family:Space Mono,monospace;font-size:11px;color:var(--muted)">загружаем...</div>';
+  const us=await db.ref('users').get();
+  if(!us.exists()){panel.innerHTML='<div style="padding:16px;color:var(--muted)">нет пользователей</div>';return;}
+  const users={};us.forEach(c=>users[c.key]=c.val());
+  const nicks=Object.keys(users);
+  const pr=await db.ref('presence').get();
+  const pres={};if(pr.exists())pr.forEach(c=>pres[c.key]=c.val());
+  const isOnL=n=>{const p=pres[ns(n)];return p&&p.online&&(Date.now()-p.ts)<45000;};
+  const onC=nicks.filter(n=>isOnL(n)).length;
+  const bnC=nicks.filter(n=>users[n].banned).length;
+  let html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">';
+  html+=aStat('Аккаунтов',nicks.length,'var(--accent)');
+  html+=aStat('Онлайн',onC,'var(--accent2)');
+  html+=aStat('Забанено',bnC,'var(--accent3)');
+  html+='</div><div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Пользователи</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:6px">';
+  nicks.forEach(nick=>{
+    const u=users[nick],on=isOnL(nick),bn=!!u.banned,ia=nick===ADMIN;
+    const cr=u.createdAt?new Date(u.createdAt).toLocaleDateString('ru'):'—';
+    const bc=bn?'rgba(247,106,138,0.2)':ia?'rgba(247,194,106,0.25)':'var(--border)';
+    const avbg=ia?'rgba(247,194,106,0.15)':bn?'rgba(247,106,138,0.1)':'rgba(124,106,247,0.12)';
+    const avc=ia?'#f7c26a':bn?'var(--accent3)':'var(--accent)';
+    const avb=ia?'rgba(247,194,106,0.3)':bn?'rgba(247,106,138,0.3)':'rgba(124,106,247,0.3)';
+    html+='<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface2);border:1px solid '+bc+';border-radius:10px;opacity:'+(bn?.65:1)+'">';
+    html+='<div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Space Mono,monospace;font-size:11px;font-weight:700;flex-shrink:0;background:'+avbg+';color:'+avc+';border:1px solid '+avb+'">'+nick.slice(0,2).toUpperCase()+'</div>';
+    html+='<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px">@'+esc(nick);
+    if(ia)html+=' <span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace">ADMIN</span>';
+    if(bn)html+=' <span style="font-size:9px;color:var(--accent3);background:rgba(247,106,138,0.08);border:1px solid rgba(247,106,138,0.2);padding:1px 5px;border-radius:3px;font-family:Space Mono,monospace">БАН</span>';
+    html+='</div><div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);margin-top:2px">'+(on?'<span style="color:var(--accent2)">● онлайн</span>':'○ оффлайн')+' &nbsp;·&nbsp; зарег: '+cr+'</div></div>';
+    if(!ia){
+      const bb=bn?'rgba(79,200,168,0.3)':'rgba(247,106,138,0.3)',bbg=bn?'rgba(79,200,168,0.08)':'rgba(247,106,138,0.08)',bbc=bn?'var(--accent2)':'var(--accent3)';
+      html+='<div style="display:flex;gap:6px">';
+      html+='<button onclick="adminBan(\''+nick+'\')" style="padding:5px 10px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid '+bb+';background:'+bbg+';color:'+bbc+'">'+(bn?'Разбан':'Бан')+'</button>';
+      html+='<button onclick="adminDel(\''+nick+'\')" style="padding:5px 10px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid var(--border);background:transparent;color:var(--muted)">Удалить</button>';
+      html+='</div>';
+    }
+    html+='</div>';
+  });
+  html+='</div><div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)"><div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Опасная зона</div>';
+  html+='<button onclick="adminClearAll()" style="padding:9px 16px;border-radius:8px;border:1px solid rgba(247,106,138,0.3);background:rgba(247,106,138,0.08);color:var(--accent3);font-family:Syne,sans-serif;font-weight:600;font-size:13px;cursor:pointer">Удалить все кроме своего</button></div>';
+  panel.innerHTML=html;
+}
+function aStat(l,v,c){return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px"><div style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">'+l+'</div><div style="font-size:26px;font-weight:800;color:'+c+'">'+v+'</div></div>';}
+async function adminBan(nick){if(nick===ADMIN)return;const s=await db.ref('users/'+ns(nick)+'/banned').get();await db.ref('users/'+ns(nick)+'/banned').set(!s.val());renderAdmin();}
+async function adminDel(nick){if(nick===ADMIN)return;if(!confirm('Удалить @'+nick+'?'))return;await db.ref('users/'+ns(nick)).remove();await db.ref('friends/'+ns(nick)).remove();renderAdmin();}
+async function adminClearAll(){if(!confirm('Удалить ВСЕ аккаунты кроме своего?'))return;const s=await db.ref('users').get();const u={};s.forEach(c=>{if(c.key!==ns(MN))u['users/'+c.key]=null;});await db.ref().update(u);renderAdmin();}
+
+// ── VOICE ──────────────────────────────────────────────────
+let myPeer=null,localStream=null,screenStream=null,isMuted=false,isHost=false,room='';
+let peers={};
+
+function setIdleLog(m,c){const e=document.getElementById('idleLog');e.textContent=m;e.className='idle-log '+(c||'');}
+function randRoom(){const w=['echo','nova','orbit','delta','sigma','pulse','flux','relay','vortex','zenith'];return w[Math.floor(Math.random()*w.length)]+Math.floor(100+Math.random()*900);}
+function createRoom(){document.getElementById('roomInput').value=randRoom();joinRoom();}
+
+async function joinRoom(){
+  const raw=document.getElementById('roomInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  room=raw.substring(0,22);
+  if(!room){setIdleLog('⚠ введи название комнаты','err');return;}
+  const ud=await db.ref('users/'+ns(MN)).get();
+  if(ud.exists()&&ud.val().banned){setIdleLog('❌ аккаунт заблокирован','err');return;}
   setIdleLog('— запрашиваем микрофон —');
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
-  } catch(e) {
-    setIdleLog('❌ нет доступа к микрофону', 'err'); return;
-  }
-
+  try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});}
+  catch(e){setIdleLog('❌ нет доступа к микрофону','err');return;}
   setIdleLog('— подключаемся —');
-  tryAsHost(roomToPeerId(room));
+  tryAsHost(r2p(room));
 }
-
-function tryAsHost(hostId) {
-  isHost = true;
-  myPeer = new Peer(hostId, PEER_CONFIG);
-  myPeer.on('open', () => {
-    setIdleLog('', 'ok');
-    enterCallUI();
-    sysMsg('Ты создал комнату #' + room + ' как @' + myNick);
-    myPeer.on('call', call => {
-      const isScreen = call.metadata?.type === 'screen';
-      call.answer(isScreen ? new MediaStream() : localStream);
-      if (isScreen) { screenConn = call; handleIncomingScreenConn(call); }
-      else { guestPeerId = call.peer; mediaConn = call; handleMediaConn(call); }
+function tryAsHost(hostId){
+  isHost=true;myPeer=new Peer(hostId,PC);
+  myPeer.on('open',()=>{
+    setIdleLog('','ok');enterCallUI();sysMsg('Ты создал комнату #'+room+' как @'+MN);
+    myPeer.on('call',call=>{
+      const isSS=call.metadata&&call.metadata.type==='screen';
+      call.answer(isSS?new MediaStream():localStream);
+      if(isSS)handleIncomingSS(call);else handleMediaConn(call);
     });
-    myPeer.on('connection', conn => { guestPeerId = conn.peer; dataConn = conn; setupDataConn(conn); });
+    myPeer.on('connection',conn=>setupDataConn(conn));
   });
-  myPeer.on('error', err => {
-    if (err.type === 'unavailable-id') { myPeer.destroy(); joinAsGuest(hostId); }
-    else setIdleLog('❌ ' + err.message, 'err');
+  myPeer.on('error',err=>{
+    if(err.type==='unavailable-id'){myPeer.destroy();joinAsGuest(hostId);}
+    else setIdleLog('❌ '+err.message,'err');
   });
 }
-
-function joinAsGuest(hostId) {
-  isHost = false;
-  myPeer = new Peer('voidg' + Math.random().toString(36).slice(2,10), PEER_CONFIG);
-  myPeer.on('call', call => {
-    // Host is calling guest back with screen share
-    if (call.metadata?.type === 'screen') {
-      call.answer(new MediaStream());
-      handleIncomingScreenConn(call);
+function joinAsGuest(hostId){
+  isHost=false;
+  myPeer=new Peer('voidg'+Math.random().toString(36).slice(2,10),PC);
+  myPeer.on('call',call=>{
+    if(call.metadata&&call.metadata.type==='screen'){call.answer(new MediaStream());handleIncomingSS(call);}
+  });
+  myPeer.on('open',()=>{
+    setIdleLog('— звоним хосту —');enterCallUI();sysMsg('Ты вошёл в комнату #'+room+' как @'+MN);
+    const call=myPeer.call(hostId,localStream,{metadata:{nick:MN,isAdmin:MN===ADMIN}});
+    handleMediaConn(call);
+    const conn=myPeer.connect(hostId,{metadata:{nick:MN,isAdmin:MN===ADMIN},reliable:true});
+    setupDataConn(conn);
+    conn.on('open',()=>conn.send({type:'hello',nick:MN,isAdmin:MN===ADMIN}));
+  });
+  myPeer.on('error',err=>{
+    if(err.type==='peer-unavailable'){myPeer.destroy();setTimeout(()=>tryAsHost(r2p(room)),800);}
+    else setIdleLog('❌ '+err.message,'err');
+  });
+}
+function handleMediaConn(call){
+  const pid=call.peer;
+  if(!peers[pid])peers[pid]={};
+  peers[pid].mediaConn=call;
+  call.on('stream',stream=>{
+    document.getElementById('remoteAudio').srcObject=stream;
+    const nick=(call.metadata&&call.metadata.nick)?call.metadata.nick:pid;
+    addPeerTile(pid,nick,!!(call.metadata&&call.metadata.isAdmin));
+    sysMsg('🔗 подключён @'+nick);
+  });
+  call.on('close',()=>removePeer(pid));
+  call.on('error',e=>sysMsg('⚠ '+e.message));
+}
+function setupDataConn(conn){
+  const pid=conn.peer;
+  if(!peers[pid])peers[pid]={};
+  peers[pid].dataConn=conn;
+  conn.on('open',()=>{if(isHost)conn.send({type:'hello',nick:MN,isAdmin:MN===ADMIN});});
+  conn.on('data',d=>{
+    if(d.type==='hello'){
+      if(!peers[pid])peers[pid]={};
+      peers[pid].nick=d.nick;peers[pid].isAdmin=d.isAdmin;
+      addPeerTile(pid,d.nick,d.isAdmin);
     }
+    if(d.type==='chat')addMsg(d.nick||'?',d.text,'theirs');
+    if(d.type==='screen_start')sysMsg('📺 @'+(d.nick||peers[pid]?.nick||'друг')+' начал демонстрацию');
+    if(d.type==='screen_stop'){hideRemoteSS();sysMsg('📺 демонстрация завершена');}
+    if(d.type==='kick'){sysMsg('⛔ тебя кикнули из комнаты');hangup();}
   });
-  myPeer.on('open', () => {
-    setIdleLog('— звоним хосту —');
-    enterCallUI();
-    sysMsg('Ты вошёл в комнату #' + room + ' как @' + myNick);
-    const call = myPeer.call(hostId, localStream, { metadata: { nick: myNick } });
-    mediaConn = call; handleMediaConn(call);
-    const conn = myPeer.connect(hostId, { metadata: { nick: myNick }, reliable: true });
-    dataConn = conn; setupDataConn(conn);
-    conn.on('open', () => conn.send({ type: 'hello', nick: myNick, isAdmin: myNick === ADMIN_NICK }));
+  conn.on('close',()=>removePeer(pid));
+}
+
+// ── Tiles ──────────────────────────────────────────────────
+function addPeerTile(pid,nick,isAdmin){
+  if(!peers[pid])peers[pid]={};
+  peers[pid].nick=nick;peers[pid].isAdmin=isAdmin;
+  document.getElementById('waitTile').style.display='none';
+  const cont=document.getElementById('peersContainer');
+  let tile=document.getElementById('pt_'+pid);
+  if(!tile){tile=document.createElement('div');tile.className='p-tile';tile.id='pt_'+pid;cont.appendChild(tile);}
+  peers[pid].tileEl=tile;
+  tile.innerHTML='<div class="p-av peer">'+nick.slice(0,2).toUpperCase()+'</div>'
+    +'<div class="p-info"><div class="p-name">@'+esc(nick)+(isAdmin?' <span class="badge-adm">ADMIN</span>':'')+'</div>'
+    +'<div class="p-status live">● подключён</div></div>'
+    +'<div class="viz"><div class="vbar fb"></div><div class="vbar fb"></div><div class="vbar fb"></div><div class="vbar fb"></div><div class="vbar fb"></div></div>'
+    +(isHost?'<button class="p-kick" onclick="kickPeer(\''+pid+'\')" title="Кикнуть">✕</button>':'');
+}
+function removePeer(pid){
+  const p=peers[pid];if(!p)return;
+  if(p.tileEl)p.tileEl.remove();
+  try{p.mediaConn?.close();p.dataConn?.close();p.mySSCall?.close();p.inSSCall?.close();}catch(e){}
+  const nick=p.nick||pid;delete peers[pid];
+  if(!document.getElementById('peersContainer').children.length)
+    document.getElementById('waitTile').style.display='flex';
+  document.getElementById('remoteAudio').srcObject=null;
+  hideRemoteSS();sysMsg('@'+nick+' отключился');
+}
+function kickPeer(pid){
+  const p=peers[pid];if(!p)return;
+  if(p.dataConn&&p.dataConn.open)p.dataConn.send({type:'kick'});
+  sysMsg('⛔ @'+(p.nick||pid)+' кикнут');
+  setTimeout(()=>removePeer(pid),300);
+}
+
+// ── Screen Share ───────────────────────────────────────────
+function handleIncomingSS(call){
+  const pid=call.peer;
+  call.on('stream',stream=>{
+    const vid=document.getElementById('remoteSSVideo');
+    vid.srcObject=stream;vid.play().catch(()=>{});
+    document.getElementById('remoteSSWrap').classList.add('active');
+    document.getElementById('ssEmpty').style.display='none';
+    const nick=peers[pid]?.nick||'Друг';
+    document.getElementById('remoteSSlbl').textContent='@'+nick+' демонстрирует';
   });
-  myPeer.on('error', err => {
-    if (err.type === 'peer-unavailable') {
-      myPeer.destroy(); setTimeout(() => tryAsHost(roomToPeerId(room)), 800);
-    } else setIdleLog('❌ ' + err.message, 'err');
-  });
+  call.on('close',()=>hideRemoteSS());
+  if(!peers[pid])peers[pid]={};
+  peers[pid].inSSCall=call;
 }
-
-function handleMediaConn(call) {
-  call.on('stream', stream => {
-    document.getElementById('remoteAudio').srcObject = stream;
-    showFriend(call.metadata?.nick || call.peer);
-    sysMsg('🔗 голосовая связь установлена');
-  });
-  call.on('close', () => friendDisconnected());
-  call.on('error', e => sysMsg('⚠ ' + e.message));
+function hideRemoteSS(){
+  const v=document.getElementById('remoteSSVideo');v.srcObject=null;
+  document.getElementById('remoteSSWrap').classList.remove('active');
+  if(!document.getElementById('mySSWrap').classList.contains('active'))
+    document.getElementById('ssEmpty').style.display='';
 }
-
-// Host receives screen stream from guest
-function handleIncomingScreenConn(call) {
-  call.on('stream', stream => {
-    showRemoteScreen(stream);
-    sysMsg('📺 ' + (friendNick || 'друг') + ' начал демонстрацию');
-  });
-  call.on('close', () => hideRemoteScreen());
-}
-
-function showRemoteScreen(stream) {
-  const vid = document.getElementById('remoteScreenVideoEl');
-  vid.srcObject = stream;
-  vid.play().catch(()=>{});
-  document.getElementById('remoteScreenWrap').classList.add('active');
-  document.getElementById('screenshareEmpty').style.display = 'none';
-  document.getElementById('remoteScreenLabel').textContent = (friendNick||'Друг') + ' демонстрирует';
-}
-function hideRemoteScreen() {
-  document.getElementById('remoteScreenWrap').classList.remove('active');
-  document.getElementById('screenshareEmpty').style.display = '';
-}
-
-function setupDataConn(conn) {
-  conn.on('open', () => {
-    if (isHost) conn.send({ type: 'hello', nick: myNick, isAdmin: myNick === ADMIN_NICK });
-  });
-  conn.on('data', d => {
-    if (d.type === 'hello') {
-      friendNick = d.nick || 'друг';
-      showFriend(friendNick, d.isAdmin);
-    }
-    if (d.type === 'chat') addMsg(d.nick || friendNick, d.text, 'theirs');
-    if (d.type === 'screen_start') sysMsg('📺 @' + (d.nick||friendNick) + ' начал демонстрацию');
-    if (d.type === 'screen_stop') {
-      hideRemoteScreen();
-      sysMsg('📺 демонстрация завершена');
-    }
-  });
-  conn.on('close', () => friendDisconnected());
-}
-
-function showFriend(nick, isAdmin) {
-  if (nick) friendNick = nick;
-  const nameEl = document.getElementById('friendTileName');
-  if (isAdmin) {
-    nameEl.innerHTML = esc(friendNick) + ' <span style="font-size:9px;color:#f7c26a;background:rgba(247,194,106,0.12);border:1px solid rgba(247,194,106,0.3);padding:1px 4px;border-radius:3px;font-family:Space Mono,monospace">ADMIN</span>';
-  } else {
-    nameEl.textContent = friendNick;
-  }
-  document.getElementById('friendTileAv').textContent = friendNick.slice(0,2).toUpperCase();
-  document.getElementById('friendTile').style.display = 'flex';
-  document.getElementById('waitingTile').style.display = 'none';
-}
-
-function friendDisconnected() {
-  document.getElementById('friendTile').style.display = 'none';
-  document.getElementById('waitingTile').style.display = 'flex';
-  document.getElementById('remoteAudio').srcObject = null;
-  hideRemoteScreen();
-  sysMsg('@' + friendNick + ' отключился');
-}
-
-function enterCallUI() {
-  showView('voice');
-  document.getElementById('voiceRoomName').textContent = room;
-  document.getElementById('currentRoom').textContent = room;
-  const url = location.href.split('#')[0] + '#' + encodeURIComponent(room);
-  document.getElementById('inviteUrl').value = url;
-
-  // Sidebar
-  document.getElementById('sidebarRooms').innerHTML = `
-    <div class="sidebar-item active">
-      <div class="sidebar-item-icon room">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1C6 1 2 3.5 2 6.5a4 4 0 008 0C10 3.5 6 1 6 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6.5" r="1.2" fill="currentColor"/></svg>
-      </div>
-      <span class="sidebar-item-name">#${esc(room)}</span>
-      <div class="sidebar-online-dot online"></div>
-    </div>`;
-}
-
-function toggleMic() {
-  isMuted = !isMuted;
-  localStream?.getAudioTracks().forEach(t => t.enabled = !isMuted);
-  const btn = document.getElementById('micBtn');
-  btn.classList.toggle('muted-on', isMuted);
-  const icon = document.getElementById('micIcon');
-  if (isMuted) {
-    icon.innerHTML = `<rect x="6" y="2" width="6" height="9" rx="3" stroke="var(--accent3)" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="var(--accent3)" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="var(--accent3)" stroke-width="1.4" stroke-linecap="round"/><path d="M3 3l12 12" stroke="var(--accent3)" stroke-width="1.4" stroke-linecap="round"/>`;
-  } else {
-    icon.innerHTML = `<rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`;
-  }
-  document.querySelectorAll('#myViz .vbar').forEach(b => b.classList.toggle('muted', isMuted));
-}
-
-function hangup() {
-  stopScreenShare(true);
-  mediaConn?.close(); screenConn?.close(); dataConn?.close(); myPeer?.destroy();
-  localStream?.getTracks().forEach(t => t.stop());
-  mediaConn = screenConn = dataConn = myPeer = localStream = screenStream = null;
-  isMuted = false;
-
-  document.getElementById('friendTile').style.display = 'none';
-  document.getElementById('waitingTile').style.display = 'flex';
-  document.getElementById('chatMsgs').innerHTML = '';
-  document.getElementById('remoteAudio').srcObject = null;
-  hideRemoteScreen();
-
-  const icon = document.getElementById('micIcon');
-  if (icon) icon.innerHTML = `<rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`;
-  document.getElementById('micBtn')?.classList.remove('muted-on');
-
-  document.getElementById('sidebarRooms').innerHTML = `
-    <div class="sidebar-item" onclick="showView('idle')">
-      <div class="sidebar-item-icon room">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 2 4 2 8a5 5 0 0010 0c0-4-5-6.5-5-6.5z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/></svg>
-      </div>
-      <span class="sidebar-item-name">Войти в канал</span>
-    </div>`;
-  if (currentView === 'voice') showView('idle');
-}
-
-function copyLink() {
-  navigator.clipboard.writeText(document.getElementById('inviteUrl').value).then(() => {
-    const b = document.getElementById('copyBtn');
-    b.textContent = 'COPIED'; setTimeout(() => b.textContent = 'COPY', 2000);
-  });
-}
-
-function sendChat() {
-  const inp = document.getElementById('chatIn');
-  const text = inp.value.trim();
-  if (!text) return;
-  inp.value = '';
-  addMsg(myNick, text, 'mine');
-  if (dataConn?.open) dataConn.send({ type: 'chat', nick: myNick, text });
-}
-
-function addMsg(nick, text, side) {
-  const box = document.getElementById('chatMsgs');
-  const el = document.createElement('div');
-  el.className = 'msg';
-  if (side === 'sys') {
-    el.innerHTML = `<div class="msg-av sys">—</div><div class="msg-body"><div class="msg-text sys">${esc(text)}</div></div>`;
-  } else {
-    el.innerHTML = `<div class="msg-av ${side}">${(nick||'?').slice(0,2).toUpperCase()}</div>
-      <div class="msg-body"><div class="msg-nick ${side}">@${esc(nick)}</div><div class="msg-text">${esc(text)}</div></div>`;
-  }
-  box.appendChild(el);
-  box.scrollTop = box.scrollHeight;
-}
-function sysMsg(text) { addMsg(null, text, 'sys'); }
-
-// ============================================================
-//  SCREEN SHARE
-// ============================================================
-let shareSource = 'screen';
-let shareQuality = '720';
-
-function openSharePicker() {
-  if (screenStream) { stopScreenShare(); return; }
-  document.getElementById('shareModal').classList.remove('hidden');
-}
-function closeShareModal() { document.getElementById('shareModal').classList.add('hidden'); }
-
-function selectShareSource(s) {
-  shareSource = s;
-  ['screen','window','tab'].forEach(x =>
-    document.getElementById('shareOpt' + x.charAt(0).toUpperCase() + x.slice(1))?.classList.toggle('selected', x === s));
-}
-function selectQuality(q) {
-  shareQuality = q;
-  ['auto','720','1080','low'].forEach(x =>
-    document.getElementById('qBtn' + (x==='auto'?'Auto':x==='low'?'Low':x))?.classList.toggle('selected', x === q));
-}
-
-async function startScreenShare() {
-  closeShareModal();
-  const w = shareQuality==='1080'?1920 : shareQuality==='low'?854 : 1280;
-  const h = shareQuality==='1080'?1080 : shareQuality==='low'?480 : 720;
-
-  try {
-    screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { width:{ideal:w}, height:{ideal:h}, frameRate:{ideal:30}, cursor:'always' },
-      audio: false
+let ssOpt='screen',ssQ='720';
+function openSSPicker(){if(screenStream){stopSS();return;}document.getElementById('ssModal').classList.remove('hidden');}
+function closeSSModal(){document.getElementById('ssModal').classList.add('hidden');}
+function setSSOpt(s){ssOpt=s;['screen','window','tab'].forEach(x=>document.getElementById('ssOpt'+x.charAt(0).toUpperCase()+x.slice(1))?.classList.toggle('sel',x===s));}
+function setQ(q){ssQ=q;['auto','720','1080','low'].forEach(x=>document.getElementById('q'+(x==='auto'?'Auto':x==='low'?'Low':x))?.classList.toggle('sel',x===q));}
+async function startSS(){
+  closeSSModal();
+  const w=ssQ==='1080'?1920:ssQ==='low'?854:1280,h=ssQ==='1080'?1080:ssQ==='low'?480:720;
+  try{
+    screenStream=await navigator.mediaDevices.getDisplayMedia({
+      video:{width:{ideal:w},height:{ideal:h},frameRate:{ideal:30},cursor:'always'},audio:false
     });
-  } catch(e) {
-    sysMsg('⚠ демонстрация отменена'); return;
-  }
-
-  // Show MY local preview
-  const localVid = document.getElementById('localScreenVideo');
-  localVid.srcObject = screenStream;
-  localVid.play().catch(()=>{});
-  document.getElementById('localScreenWrap').classList.add('active');
-  document.getElementById('screenshareEmpty').style.display = 'none';
-  document.getElementById('shareBtn').classList.add('active-on');
-
-  // Send stream to the other peer
-  if (myPeer && dataConn) {
-    if (!isHost) {
-      // Guest → calls host with screen
-      const call = myPeer.call(roomToPeerId(room), screenStream, { metadata: { nick: myNick, type: 'screen' } });
-      screenConn = call;
-      call.on('error', e => sysMsg('⚠ screen: ' + e.message));
-    } else {
-      // Host → calls guest back with screen
-      // guestPeerId is stored when guest connected
-      if (guestPeerId) {
-        const call = myPeer.call(guestPeerId, screenStream, { metadata: { nick: myNick, type: 'screen' } });
-        screenConn = call;
-        call.on('error', e => sysMsg('⚠ screen: ' + e.message));
-      }
+  }catch(e){sysMsg('⚠ демонстрация отменена');return;}
+  // My local preview
+  const mv=document.getElementById('mySSVideo');
+  mv.srcObject=screenStream;mv.play().catch(()=>{});
+  document.getElementById('mySSWrap').classList.add('active');
+  document.getElementById('ssEmpty').style.display='none';
+  document.getElementById('ssBtn').classList.add('active-on');
+  // Send to all peers
+  Object.entries(peers).forEach(([pid,p])=>{
+    if(myPeer){
+      try{
+        const call=myPeer.call(pid,screenStream,{metadata:{nick:MN,type:'screen'}});
+        p.mySSCall=call;
+      }catch(e){}
     }
-    // Notify via data so remote shows "X is sharing" message
-    if (dataConn.open) dataConn.send({ type: 'screen_start', nick: myNick });
-  }
-
-  screenStream.getVideoTracks()[0].onended = () => stopScreenShare();
+    if(p.dataConn?.open)p.dataConn.send({type:'screen_start',nick:MN});
+  });
+  screenStream.getVideoTracks()[0].onended=()=>stopSS();
   sysMsg('📺 ты начал демонстрацию экрана');
 }
+function stopSS(silent){
+  if(!screenStream)return;
+  screenStream.getTracks().forEach(t=>t.stop());screenStream=null;
+  document.getElementById('mySSVideo').srcObject=null;
+  document.getElementById('mySSWrap').classList.remove('active');
+  document.getElementById('ssEmpty').style.display='';
+  document.getElementById('ssBtn').classList.remove('active-on');
+  Object.values(peers).forEach(p=>{
+    try{p.mySSCall?.close();}catch(e){}delete p.mySSCall;
+    if(!silent&&p.dataConn?.open)p.dataConn.send({type:'screen_stop'});
+  });
+  if(!silent)sysMsg('📺 демонстрация завершена');
+}
 
-function stopScreenShare(silent) {
-  if (!screenStream) return;
-  screenStream.getTracks().forEach(t => t.stop());
-  screenStream = null;
-  const localVid = document.getElementById('localScreenVideo');
-  localVid.srcObject = null;
-  document.getElementById('localScreenWrap').classList.remove('active');
-  document.getElementById('screenshareEmpty').style.display = '';
-  document.getElementById('shareBtn').classList.remove('active-on');
-  if (!silent) {
-    if (dataConn?.open) dataConn.send({ type: 'screen_stop' });
-    sysMsg('📺 демонстрация завершена');
+// ── Call UI ────────────────────────────────────────────────
+function enterCallUI(){
+  showView('voice');
+  document.getElementById('vcRoomName').textContent=room;
+  document.getElementById('currentRoom').textContent=room;
+  document.getElementById('inviteUrl').value=location.href.split('#')[0]+'#'+encodeURIComponent(room);
+  document.getElementById('sbRooms').innerHTML='<div class="sb-item active"><div class="sb-icon room"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1C6 1 2 3.5 2 6.5a4 4 0 008 0C10 3.5 6 1 6 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6.5" r="1.2" fill="currentColor"/></svg></div><span class="sb-name">#'+esc(room)+'</span><div class="sb-dot"></div></div>';
+}
+function toggleMic(){
+  isMuted=!isMuted;
+  localStream?.getAudioTracks().forEach(t=>t.enabled=!isMuted);
+  document.getElementById('micBtn').classList.toggle('muted-on',isMuted);
+  const icon=document.getElementById('micIcon');
+  icon.innerHTML=isMuted
+    ?'<rect x="6" y="2" width="6" height="9" rx="3" stroke="var(--accent3)" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="var(--accent3)" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="var(--accent3)" stroke-width="1.4" stroke-linecap="round"/><path d="M3 3l12 12" stroke="var(--accent3)" stroke-width="1.4" stroke-linecap="round"/>'
+    :'<rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
+  document.querySelectorAll('#myViz .vbar').forEach(b=>b.classList.toggle('muted',isMuted));
+  document.getElementById('myTileStatus').textContent=isMuted?'● заглушен':'● в эфире';
+}
+function hangup(){
+  stopSS(true);
+  Object.values(peers).forEach(p=>{try{p.mediaConn?.close();p.dataConn?.close();p.mySSCall?.close();p.inSSCall?.close();}catch(e){}});
+  peers={};
+  if(myPeer){myPeer.destroy();myPeer=null;}
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
+  isMuted=false;isHost=false;
+  document.getElementById('peersContainer').innerHTML='';
+  document.getElementById('waitTile').style.display='flex';
+  document.getElementById('chatMsgs').innerHTML='';
+  document.getElementById('remoteAudio').srcObject=null;
+  hideRemoteSS();
+  document.getElementById('micBtn')?.classList.remove('muted-on');
+  const icon=document.getElementById('micIcon');
+  if(icon)icon.innerHTML='<rect x="6" y="2" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 9a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 15v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
+  document.getElementById('sbRooms').innerHTML='<div class="sb-item" onclick="showView(\'idle\')"><div class="sb-icon room"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1C6.5 1 2 3.5 2 7a4.5 4.5 0 009 0C11 3.5 6.5 1 6.5 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="6.5" cy="7" r="1.3" fill="currentColor"/></svg></div><span class="sb-name">Войти в канал</span></div>';
+  if(CV==='voice')showView('idle');
+}
+function copyLink(){
+  navigator.clipboard.writeText(document.getElementById('inviteUrl').value).then(()=>{
+    const b=document.getElementById('copyBtn');b.textContent='COPIED';setTimeout(()=>b.textContent='COPY',2000);
+  });
+}
+function sendChat(){
+  const inp=document.getElementById('chatIn');const text=inp.value.trim();if(!text)return;
+  inp.value='';addMsg(MN,text,'mine');
+  Object.values(peers).forEach(p=>{if(p.dataConn?.open)p.dataConn.send({type:'chat',nick:MN,text});});
+}
+function addMsg(nick,text,side){
+  const box=document.getElementById('chatMsgs');
+  const el=document.createElement('div');el.className='msg';
+  if(side==='sys'){
+    el.innerHTML='<div class="msg-av sys">—</div><div class="msg-body"><div class="msg-text sys">'+esc(text)+'</div></div>';
+  }else{
+    el.innerHTML='<div class="msg-av '+side+'">'+(nick||'?').slice(0,2).toUpperCase()+'</div>'
+      +'<div class="msg-body"><div class="msg-nick '+side+'">@'+esc(nick)+'</div><div class="msg-text">'+esc(text)+'</div></div>';
   }
-  try { screenConn?.close(); } catch(e) {}
-  screenConn = null;
+  box.appendChild(el);box.scrollTop=box.scrollHeight;
 }
+function sysMsg(t){addMsg(null,t,'sys');}
 
-// ============================================================
-//  UTILS
-// ============================================================
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+// ── STARTUP ────────────────────────────────────────────────
+window.addEventListener('load',function(){
+  renderSaved();
+  const saved=localStorage.getItem('void_current');
+  if(saved){
+    db.ref('users/'+ns(saved)).get().then(s=>{
+      if(s.exists()&&!s.val().banned)loginAs(saved);
+    });
+  }
+  const hash=decodeURIComponent(location.hash.slice(1));
+  if(hash)document.getElementById('roomInput').value=hash;
 
-// ============================================================
-//  STARTUP
-// ============================================================
-window.addEventListener('load', function() {
-  document.getElementById('roomInput').addEventListener('keydown', function(e){ if(e.key==='Enter') joinRoom(); });
-  document.getElementById('chatIn').addEventListener('keydown', function(e){ if(e.key==='Enter') sendChat(); });
-  document.getElementById('dmInput').addEventListener('keydown', function(e){ if(e.key==='Enter') sendDM(); });
-  document.getElementById('friendAddInput').addEventListener('keydown', function(e){ if(e.key==='Enter') sendFriendRequest(); });
-  document.getElementById('loginPass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
-  document.getElementById('regPass2').addEventListener('keydown', function(e){ if(e.key==='Enter') doRegister(); });
-
-  renderSavedAccounts();
-  var saved = getCurrentUser();
-  if (saved && getUserData(saved)) loginAs(saved);
-
-  var hash = decodeURIComponent(location.hash.slice(1));
-  if (hash) document.getElementById('roomInput').value = hash;
+  document.getElementById('roomInput').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
+  document.getElementById('chatIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+  document.getElementById('dmIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendDM();});
+  document.getElementById('fAddIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendFReq();});
+  document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('regPass2').addEventListener('keydown',e=>{if(e.key==='Enter')doRegister();});
 });
 </script>
 </body>
