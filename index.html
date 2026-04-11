@@ -692,6 +692,7 @@ function initApp(){
   presRef.onDisconnect().remove();
   setInterval(()=>{if(CU)presRef.set({online:true,ts:Date.now()});},20000);
   listenFriends();
+  listenNotifications();
   if(MN===ADMIN)listenAdmin();
   renderSidebarDMs();renderPendingBadge();
   showV('idle');
@@ -814,12 +815,16 @@ async function renderFList(tab){
 }
 async function renderSidebarDMs(){
   const c=$('sbDMs');if(!c)return;
+  // Clear existing items to prevent duplicates
   c.innerHTML='';
   const s=await db.ref('friends/'+ns(MN)).get();
   if(!s.exists())return;
+  const friends=[];
   s.forEach(ch=>{
-    if(ch.val().status!=='friend')return;
-    const nick=ch.key;
+    if(ch.val().status==='friend')friends.push(ch.key);
+  });
+  // Render each friend once
+  friends.forEach(nick=>{
     const div=document.createElement('div');div.className='sbi';div.dataset.nick=nick;
     div.onclick=()=>showV('dm',nick);
     if(CV==='dm'&&CDN===nick)div.classList.add('on');
@@ -836,13 +841,19 @@ function openDM(nick){
   $('dmSt').textContent='...';
   $('dmCallBtn').dataset.nick=nick;
   isOn(nick).then(on=>$('dmSt').textContent=on?'онлайн':'не в сети');
-  const msgs=$('dmMsgs');msgs.innerHTML='';
-  // Clean up existing listener
-  db.ref('dms/'+dmKey(MN,nick)).off();
-  delete dmListeners[nick];
+  const msgs=$('dmMsgs');
+  // Clear messages to prevent stacking
+  msgs.innerHTML='';
+  // Clean up existing listener to prevent duplicates
+  const oldKey=Object.keys(dmListeners).find(k=>k===nick);
+  if(oldKey){
+    db.ref('dms/'+dmKey(MN,oldKey)).off('child_added',dmListeners[oldKey]);
+    delete dmListeners[oldKey];
+  }
   const ref=db.ref('dms/'+dmKey(MN,nick));
   // Load history once
   ref.limitToLast(100).get().then(snap=>{
+    msgs.innerHTML='';
     if(snap.exists())snap.forEach(c=>{const m=c.val();appendDMMsg(m.from,m.text,m.from===MN?'mine':'theirs');});
     msgs.scrollTop=99999;
     // Listen for new messages only
@@ -1091,6 +1102,9 @@ function listenNotifications(){
     } else if(n.type==='ping'){
       // Just ignore pings but they cause toast spam
       showToast('📶 ping','info');
+    } else if(n.type==='incoming_call'){
+      // Show incoming call overlay
+      showIncomingCall(n.from,n.room);
     }
   });
 }
@@ -1112,21 +1126,39 @@ function showToast(msg,type='info'){
 }
 
 // ── CALL TO FRIENDS ────────────────────────────────────────
-let callPeer=null,callStream=null,incomingCall=null;
+let callPeer=null,callStream=null,incomingCall=null,incomingCallData=null;
 
 function callFriendByNick(nick){
   // Open a private voice room with that friend
   const roomName='call_'+[ns(MN),ns(nick)].sort().join('_');
-  showV('idle');
-  $('roomIn').value=roomName;
   showToast('📞 Звоним @'+nick+'...','info');
   // Notify friend via Firebase
   db.ref('notifications/'+ns(nick)).push({type:'incoming_call',from:MN,room:roomName,ts:Date.now()});
-  setTimeout(()=>joinRoom(),200);
+  // Auto-join the room
+  $('roomIn').value=roomName;
+  setTimeout(()=>joinRoom(),300);
 }
 function callFriend(){
   const nick=$('dmCallBtn').dataset.nick||CDN;
   if(nick)callFriendByNick(nick);
+}
+function showIncomingCall(from,room){
+  incomingCallData={from,room};
+  $('callAvTxt').textContent=from.slice(0,2).toUpperCase();
+  $('callName').textContent='@'+from;
+  $('callSub').textContent='входящий звонок';
+  $('CALLOVER').classList.add('on');
+}
+function acceptCall(){
+  if(!incomingCallData)return;
+  $('CALLOVER').classList.remove('on');
+  $('roomIn').value=incomingCallData.room;
+  setTimeout(()=>joinRoom(),200);
+  incomingCallData=null;
+}
+function declineCall(){
+  $('CALLOVER').classList.remove('on');
+  incomingCallData=null;
 }
 
 // ── VOICE ──────────────────────────────────────────────────
@@ -1225,13 +1257,27 @@ function addPeerTile(pid,nick,isAdmin){
   peers[pid].nick=nick;peers[pid].isAdmin=isAdmin;
   $('waitTile').style.display='none';
   const cont=$('peersC');
+  // Check if tile already exists to prevent duplicates
   let tile=$('pt_'+pid);
-  if(!tile){tile=document.createElement('div');tile.className='p-tile';tile.id='pt_'+pid;cont.appendChild(tile);}
-  peers[pid].tileEl=tile;
-  tile.innerHTML=`<div class="pav peer">${nick.slice(0,2).toUpperCase()}</div>`
-    +`<div style="flex:1;min-width:0"><div class="pnm">@${esc(nick)}${isAdmin?'<span class="bdg-adm" style="font-size:8px;margin-left:3px">ADM</span>':''}</div><div class="pst live">● подключён</div></div>`
-    +`<div class="viz"><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div></div>`
-    +(isHost?`<button class="p-kick" onclick="kickPeer('${pid}')" title="Кик">✕</button>`:'');
+  if(tile){
+    // Update existing tile
+    peers[pid].tileEl=tile;
+    tile.innerHTML=`<div class="pav peer">${nick.slice(0,2).toUpperCase()}</div>`
+      +`<div style="flex:1;min-width:0"><div class="pnm">@${esc(nick)}${isAdmin?'<span class="bdg-adm" style="font-size:8px;margin-left:3px">ADM</span>':''}</div><div class="pst live">● подключён</div></div>`
+      +`<div class="viz"><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div></div>`
+      +(isHost?`<button class="p-kick" onclick="kickPeer('${pid}')" title="Кик">✕</button>`:'');
+  }else{
+    // Create new tile
+    tile=document.createElement('div');
+    tile.className='p-tile';
+    tile.id='pt_'+pid;
+    peers[pid].tileEl=tile;
+    tile.innerHTML=`<div class="pav peer">${nick.slice(0,2).toUpperCase()}</div>`
+      +`<div style="flex:1;min-width:0"><div class="pnm">@${esc(nick)}${isAdmin?'<span class="bdg-adm" style="font-size:8px;margin-left:3px">ADM</span>':''}</div><div class="pst live">● подключён</div></div>`
+      +`<div class="viz"><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div><div class="vb fb"></div></div>`
+      +(isHost?`<button class="p-kick" onclick="kickPeer('${pid}')" title="Кик">✕</button>`:'');
+    cont.appendChild(tile);
+  }
 }
 function removePeer(pid){
   const p=peers[pid];if(!p)return;
@@ -1245,6 +1291,7 @@ function removePeer(pid){
 function kickPeer(pid){
   const p=peers[pid];if(!p)return;
   if(p.dataConn?.open)p.dataConn.send({type:'kick'});
+  p.mediaConn?.close();p.dataConn?.close();nn?.open)p.dataConn.send({type:'kick'});
   sysMsg('⛔ @'+(p.nick||pid)+' кикнут');
   setTimeout(()=>removePeer(pid),300);
 }
