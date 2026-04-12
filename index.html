@@ -2497,23 +2497,26 @@ async function startSS(){
   
   // Calculate resolution based on quality setting
   let w, h;
-  if (ssQuality === '480') {
+  // Use ssQuality for new modal (Electron) or ssQ for old modal (web)
+  const quality = ssQuality || (ssQ === 'auto' ? '720' : ssQ === 'low' ? '480' : ssQ);
+  
+  if (quality === '480' || quality === 'low') {
     w = 854; h = 480;
-  } else if (ssQuality === '720') {
+  } else if (quality === '720') {
     w = 1280; h = 720;
-  } else if (ssQuality === '1080') {
+  } else if (quality === '1080') {
     w = 1920; h = 1080;
-  } else if (ssQuality === 'source') {
-    w = 3840; h = 2160; // Max resolution, will use source
+  } else if (quality === 'source' || quality === 'auto') {
+    w = 1920; h = 1080; // Default to 1080p for auto
   }
   
-  // Get FPS
-  const fps = parseInt(ssFPS);
+  // Get FPS (default 30 if not set)
+  const fps = parseInt(ssFPS) || 30;
   
   try{
     // For Electron with selected source
     if(window.electronAPI && selectedSourceId){
-      console.log('Starting screen share:', {source: selectedSourceId, quality: ssQuality, fps: ssFPS});
+      console.log('Starting screen share:', {source: selectedSourceId, quality: quality, fps: fps});
       
       const constraints = {
         audio: false,
@@ -2526,7 +2529,7 @@ async function startSS(){
       };
       
       // Add resolution constraints if not source quality
-      if (ssQuality !== 'source') {
+      if (quality !== 'source') {
         constraints.video.mandatory.minWidth = w;
         constraints.video.mandatory.maxWidth = w;
         constraints.video.mandatory.minHeight = h;
