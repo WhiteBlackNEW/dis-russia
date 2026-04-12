@@ -77,6 +77,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .sbdot.off{background:var(--m2);box-shadow:none}
 .sb-bdg{background:var(--a3);color:#fff;font-family:'Space Mono',monospace;font-size:9px;padding:1px 5px;border-radius:10px;flex-shrink:0}
 .sb-user{margin-top:auto;padding:10px 12px;border-top:1px solid var(--b);display:flex;align-items:center;gap:10px}
+
+/* ── UPDATE BADGE ── */
+.update-badge{position:absolute;top:-8px;right:0;background:var(--a2);color:#000;font-family:'Space Mono',monospace;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;animation:pulse 2s ease-in-out infinite;cursor:pointer;white-space:nowrap}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.sb-user{position:relative}
 .sb-uav{width:30px;height:30px;border-radius:50%;background:rgba(124,106,247,.18);border:1px solid rgba(124,106,247,.3);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--ac);flex-shrink:0}
 .sb-unm{font-weight:600;font-size:13px;line-height:1.2;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .sb-utg{font-family:'Space Mono',monospace;font-size:10px;color:var(--mu)}
@@ -377,6 +382,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 
 /* badge */
 .bdg-adm{font-size:9px;color:#f7c26a;background:rgba(247,194,106,.12);border:1px solid rgba(247,194,106,.3);padding:1px 5px;border-radius:3px;font-family:'Space Mono',monospace;vertical-align:middle;margin-left:4px}
+
+
+/* ── VOLUME CONTEXT MENU ── */
+.vol-ctx{position:fixed;z-index:9998;background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.6);min-width:200px;animation:fup .15s ease;display:none}
+.vol-ctx.show{display:block}
+.vol-ctx-header{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--mu);margin-bottom:8px}
+.vol-ctx-slider{margin-top:8px}
+.vol-ctx-label{font-family:'Space Mono',monospace;font-size:11px;color:var(--mu);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.vol-ctx-value{color:var(--ac);font-weight:700}
+.vol-ctx-input{width:100%;height:6px;border-radius:3px;background:var(--s2);outline:none;-webkit-appearance:none;appearance:none}
+.vol-ctx-input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ac);cursor:pointer;transition:all .15s}
+.vol-ctx-input::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.vol-ctx-input::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ac);cursor:pointer;border:none;transition:all .15s}
+.vol-ctx-input::-moz-range-thumb:hover{transform:scale(1.2)}
 
 /* ── VOLUME CONTROL ── */
 .p-vol{position:absolute;bottom:100%;left:0;background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:none;min-width:150px;z-index:100}
@@ -750,6 +769,19 @@ audio{display:none}
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+
+<!-- VOLUME CONTEXT MENU -->
+<div class="vol-ctx" id="volCtx">
+  <div class="vol-ctx-header" id="volCtxHeader">Громкость</div>
+  <div class="vol-ctx-slider">
+    <div class="vol-ctx-label">
+      <span>🔊 Уровень</span>
+      <span class="vol-ctx-value" id="volCtxValue">100%</span>
+    </div>
+    <input type="range" class="vol-ctx-input" id="volCtxInput" min="0" max="200" value="100" oninput="adjustPeerVolume(this.value)"/>
   </div>
 </div>
 
@@ -1862,10 +1894,8 @@ const peerAudioElements = {};
 function setPeerVolume(pid, volume) {
   if (!peers[pid]) return;
   
-  // Сохраняем настройку
   setSetting('peerVol_' + pid, volume);
   
-  // Создаём или обновляем audio element для этого пира
   if (!peerAudioElements[pid]) {
     const audio = document.createElement('audio');
     audio.autoplay = true;
@@ -1875,18 +1905,14 @@ function setPeerVolume(pid, volume) {
   }
   
   const audio = peerAudioElements[pid];
-  
-  // Устанавливаем громкость (0-200% = 0-2.0)
   audio.volume = Math.min(volume / 100, 1.0);
   
-  // Если есть mediaConn, подключаем stream
   if (peers[pid].mediaConn && peers[pid].mediaConn.remoteStream) {
     audio.srcObject = peers[pid].mediaConn.remoteStream;
   }
 }
 
 function showVolumeControl(pid, nick) {
-  // Показываем простой prompt для регулировки громкости
   const currentVol = getSetting('peerVol_' + pid, 100);
   const newVol = prompt(`Громкость для @${nick} (0-200%):`, currentVol);
   
@@ -2117,6 +2143,63 @@ window.addEventListener('keyup',e=>{
   }
 });
 
+
+// ── VOLUME CONTEXT MENU ────────────────────────────────────
+let currentVolumePid = null;
+let currentVolumeNick = null;
+
+function showVolumeContextMenu(x, y, pid, nick) {
+  currentVolumePid = pid;
+  currentVolumeNick = nick;
+  
+  const menu = $('volCtx');
+  const savedVol = getSetting('peerVol_' + pid, 100);
+  
+  $('volCtxHeader').textContent = 'Громкость @' + nick;
+  $('volCtxInput').value = savedVol;
+  $('volCtxValue').textContent = savedVol + '%';
+  
+  menu.classList.add('show');
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  
+  // Adjust position if menu goes off screen
+  setTimeout(() => {
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
+    if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';
+  }, 10);
+}
+
+function hideVolumeContextMenu() {
+  $('volCtx').classList.remove('show');
+}
+
+function adjustPeerVolume(vol) {
+  $('volCtxValue').textContent = vol + '%';
+  
+  if (currentVolumePid && peers[currentVolumePid]) {
+    // Save setting
+    setSetting('peerVol_' + currentVolumePid, parseInt(vol));
+    
+    // Apply volume
+    const peer = peers[currentVolumePid];
+    if (peer.mediaConn && peer.mediaConn.remoteStream) {
+      const audioEl = $('remoteAudio');
+      if (audioEl) {
+        audioEl.volume = Math.min(vol / 100, 1.0);
+      }
+    }
+  }
+}
+
+// Close volume menu on click outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.vol-ctx') && !e.target.closest('.p-tile')) {
+    hideVolumeContextMenu();
+  }
+});
+
 // ── WINDOW CONTROLS (for Electron) ────────────────────────
 function minimizeWindow(){
   if(window.electron)window.electron.send('window-minimize');
@@ -2154,6 +2237,61 @@ if(!window.electron){
 
 
 
+
+// ── LINK HANDLER ───────────────────────────────────────────
+function handleLinks() {
+  // Handle all links in messages
+  document.addEventListener('click', e => {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+      e.preventDefault();
+      
+      // Check if Electron
+      if (window.electron) {
+        // Open in external browser
+        require('electron').shell.openExternal(link.href);
+      } else {
+        // Open in new tab
+        window.open(link.href, '_blank', 'noopener,noreferrer');
+      }
+    }
+  });
+  
+  // Make URLs in messages clickable
+  function linkifyText(text) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, '<a href="// ── STARTUP" target="_blank" rel="noopener noreferrer">// ── STARTUP</a>');
+  }
+  
+  // Apply to all message texts
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.classList && node.classList.contains('msg-txt')) {
+          const text = node.textContent;
+          if (text.match(/(https?:\/\/[^\s]+)/)) {
+            node.innerHTML = linkifyText(node.innerHTML);
+          }
+        }
+      });
+    });
+  });
+  
+  // Observe chat containers
+  const chatContainers = ['chatMsgs', 'dmMsgs', 'vcMsgs'];
+  chatContainers.forEach(id => {
+    const container = $(id);
+    if (container) {
+      observer.observe(container, { childList: true, subtree: true });
+    }
+  });
+}
+
+// Initialize link handler
+window.addEventListener('load', () => {
+  handleLinks();
+});
+
 // ── STARTUP ────────────────────────────────────────────────
 window.addEventListener('load',()=>{
   // Apply saved accent color
@@ -2171,7 +2309,7 @@ window.addEventListener('load',()=>{
   if(hash)$('roomIn').value=hash;
   
   // Auto-update check
-  checkForUpdates();
+  checkForUpdatesWithBadge();
 
   $('roomIn').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
   $('chatIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
@@ -2182,7 +2320,54 @@ window.addEventListener('load',()=>{
 });
 
 // ── AUTO-UPDATE ────────────────────────────────────────────
-const APP_VERSION='2.3.0';
+const APP_VERSION='1.3.1';
+
+// ── UPDATE NOTIFICATION BADGE ──────────────────────────────
+let updateAvailable = false;
+let updateVersion = null;
+let updateUrl = null;
+
+async function checkForUpdatesWithBadge() {
+  try {
+    const snap = await db.ref('app_version').get();
+    if (snap.exists()) {
+      const latestVersion = snap.val().version;
+      updateUrl = snap.val().url || 'https://whiteblacknew.github.io/dis-russia/';
+      
+      if (latestVersion && latestVersion !== APP_VERSION) {
+        updateAvailable = true;
+        updateVersion = latestVersion;
+        showUpdateBadge();
+      }
+    }
+  } catch (e) {
+    console.log('Update check failed:', e);
+  }
+}
+
+function showUpdateBadge() {
+  const userSection = document.querySelector('.sb-user');
+  if (!userSection) return;
+  
+  // Remove old badge if exists
+  const oldBadge = document.getElementById('updateBadge');
+  if (oldBadge) oldBadge.remove();
+  
+  // Create new badge
+  const badge = document.createElement('div');
+  badge.id = 'updateBadge';
+  badge.className = 'update-badge';
+  badge.textContent = '🎉 v' + updateVersion;
+  badge.title = 'Доступно обновление! Нажмите для обновления';
+  badge.onclick = () => {
+    if (confirm('Доступна новая версия ' + updateVersion + '!\n\nОбновить сейчас?')) {
+      window.location.reload();
+    }
+  };
+  
+  userSection.appendChild(badge);
+}
+
 async function checkForUpdates(){
   try{
     const snap=await db.ref('app_version').get();
