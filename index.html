@@ -378,6 +378,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 /* badge */
 .bdg-adm{font-size:9px;color:#f7c26a;background:rgba(247,194,106,.12);border:1px solid rgba(247,194,106,.3);padding:1px 5px;border-radius:3px;font-family:'Space Mono',monospace;vertical-align:middle;margin-left:4px}
 
+/* ── VOLUME CONTROL ── */
+.p-vol{position:absolute;bottom:100%;left:0;background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:10px;box-shadow:0 4px 16px rgba(0,0,0,.4);display:none;min-width:150px;z-index:100}
+.p-vol.show{display:block}
+
+/* ── VOLUME SLIDER ── */
+.vol-slider{margin-top:12px}
+.vol-label{font-family:'Space Mono',monospace;font-size:11px;color:var(--mu);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.vol-value{color:var(--ac);font-weight:700}
+.vol-input{width:100%;height:6px;border-radius:3px;background:var(--s2);outline:none;-webkit-appearance:none;appearance:none}
+.vol-input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ac);cursor:pointer;transition:all .15s}
+.vol-input::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.vol-input::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ac);cursor:pointer;border:none;transition:all .15s}
+.vol-input::-moz-range-thumb:hover{transform:scale(1.2)}
+
 @keyframes fup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fin{from{opacity:0}to{opacity:1}}
 @keyframes blk{0%,100%{opacity:1}50%{opacity:.4}}
@@ -706,6 +720,36 @@ audio{display:none}
       </div>
     </div>
     <div class="modal-f"><div class="modal-note">Браузер спросит разрешение</div><button class="modal-cancel" onclick="closeSSModal()">Отмена</button><button class="modal-ok" onclick="startSS()">Начать</button></div>
+  </div>
+</div>
+
+
+<div class="profile-modal" id="profileModal" onclick="closeProfile(event)">
+  <div class="profile-card" onclick="event.stopPropagation()">
+    <button class="profile-close" onclick="closeProfile()">✕</button>
+    <div class="profile-banner"></div>
+    <div class="profile-av" id="profAv">WB</div>
+    <div class="profile-body">
+      <div class="profile-name" id="profName">@username</div>
+      <div class="profile-tag" id="profTag">user</div>
+      <div class="profile-section">
+        <div class="profile-label">Статус</div>
+        <div class="profile-value" id="profStatus">● онлайн</div>
+      </div>
+      <div class="profile-section">
+        <div class="profile-label">Зарегистрирован</div>
+        <div class="profile-value" id="profCreated">—</div>
+      </div>
+      <div class="profile-section" id="profVolSection" style="display:none">
+        <div class="vol-slider">
+          <div class="vol-label">
+            <span>🔊 Громкость голоса</span>
+            <span class="vol-value" id="profVolValue">100%</span>
+          </div>
+          <input type="range" class="vol-input" id="profVolInput" min="0" max="200" value="100" oninput="adjustVolumeFromProfile(this.value)"/>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1052,6 +1096,13 @@ async function renderFList(tab){
         +`<button class="f-btn msg" onclick="showV('dm','${f.key}')" title="Написать"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 1.5h10a1 1 0 011 1v5.5a1 1 0 01-1 1H4.5l-3 2V2.5a1 1 0 011-1z" stroke="var(--ac)" stroke-width="1.2"/></svg></button>`
         +`<button class="f-btn dec" onclick="removeFriend('${f.key}')" title="Удалить"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 2.5l8 8M10.5 2.5l-8 8" stroke="var(--mu)" stroke-width="1.5" stroke-linecap="round"/></svg></button>`;
     }
+    // Add context menu on right click
+    div.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      ctxTargetPid=null; // No peer ID for friends list
+      ctxTargetNick=f.key;
+      // Context menu removed
+    });
     list.appendChild(div);
   });
 }
@@ -1804,6 +1855,50 @@ function setupDataConn(conn){
   });
   conn.on('close',()=>removePeer(pid));
 }
+
+// ── VOLUME CONTROL ─────────────────────────────────────────
+const peerAudioElements = {};
+
+function setPeerVolume(pid, volume) {
+  if (!peers[pid]) return;
+  
+  // Сохраняем настройку
+  setSetting('peerVol_' + pid, volume);
+  
+  // Создаём или обновляем audio element для этого пира
+  if (!peerAudioElements[pid]) {
+    const audio = document.createElement('audio');
+    audio.autoplay = true;
+    audio.id = 'audio_' + pid;
+    document.body.appendChild(audio);
+    peerAudioElements[pid] = audio;
+  }
+  
+  const audio = peerAudioElements[pid];
+  
+  // Устанавливаем громкость (0-200% = 0-2.0)
+  audio.volume = Math.min(volume / 100, 1.0);
+  
+  // Если есть mediaConn, подключаем stream
+  if (peers[pid].mediaConn && peers[pid].mediaConn.remoteStream) {
+    audio.srcObject = peers[pid].mediaConn.remoteStream;
+  }
+}
+
+function showVolumeControl(pid, nick) {
+  // Показываем простой prompt для регулировки громкости
+  const currentVol = getSetting('peerVol_' + pid, 100);
+  const newVol = prompt(`Громкость для @${nick} (0-200%):`, currentVol);
+  
+  if (newVol !== null) {
+    const vol = parseInt(newVol);
+    if (!isNaN(vol) && vol >= 0 && vol <= 200) {
+      setPeerVolume(pid, vol);
+      showToast(`🔊 Громкость @${nick} установлена на ${vol}%`, 'info');
+    }
+  }
+}
+
 function addPeerTile(pid,nick,isAdmin){
   if(!peers[pid])peers[pid]={};
   peers[pid].nick=nick;peers[pid].isAdmin=isAdmin;
@@ -1829,6 +1924,11 @@ function addPeerTile(pid,nick,isAdmin){
       +(isHost?`<button class="p-kick" onclick="kickPeer('${pid}')" title="Кик">✕</button>`:'');
     cont.appendChild(tile);
   }
+  // Add context menu on right click
+  tile.addEventListener('contextmenu',e=>{
+    e.preventDefault();
+    // Context menu removed
+  });
 }
 function removePeer(pid){
   const p=peers[pid];if(!p)return;
@@ -2037,6 +2137,23 @@ if(!window.electron){
   document.getElementById('AUTH').style.paddingTop='0';
 }
 
+// ── CONTEXT MENU & USER PROFILE ────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ── STARTUP ────────────────────────────────────────────────
 window.addEventListener('load',()=>{
   // Apply saved accent color
@@ -2065,7 +2182,7 @@ window.addEventListener('load',()=>{
 });
 
 // ── AUTO-UPDATE ────────────────────────────────────────────
-const APP_VERSION='2.2.0';
+const APP_VERSION='2.3.0';
 async function checkForUpdates(){
   try{
     const snap=await db.ref('app_version').get();
