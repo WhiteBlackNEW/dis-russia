@@ -923,6 +923,72 @@ const $=id=>document.getElementById(id);
 const getSetting=(k,def)=>{try{return JSON.parse(localStorage.getItem('vs_'+k))??def;}catch{return def;}};
 const setSetting=(k,v)=>localStorage.setItem('vs_'+k,JSON.stringify(v));
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ── SOUND SYSTEM ───────────────────────────────────────────
+let soundsEnabled = getSetting('soundsEnabled', true);
+let lastSoundTime = 0;
+const SOUND_COOLDOWN = 300; // ms between sounds
+
+// Simple beep sounds using Web Audio API
+function playSound(type) {
+  if (!soundsEnabled) return;
+  
+  const now = Date.now();
+  if (now - lastSoundTime < SOUND_COOLDOWN) return;
+  lastSoundTime = now;
+  
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    if (type === 'call') {
+      // Incoming call - two tone
+      oscillator.frequency.value = 800;
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+      
+      setTimeout(() => {
+        const osc2 = audioContext.createOscillator();
+        const gain2 = audioContext.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioContext.destination);
+        osc2.frequency.value = 600;
+        gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        osc2.start(audioContext.currentTime);
+        osc2.stop(audioContext.currentTime + 0.3);
+      }, 400);
+    } else if (type === 'notification') {
+      // Notification - single tone
+      oscillator.frequency.value = 600;
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    } else if (type === 'message') {
+      // Message - short beep
+      oscillator.frequency.value = 500;
+      gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+    }
+  } catch (e) {
+    console.error('Sound error:', e);
+  }
+}
+
+function toggleSounds() {
+  soundsEnabled = !soundsEnabled;
+  setSetting('soundsEnabled', soundsEnabled);
+  showToast(soundsEnabled ? '🔊 Звуки включены' : '🔇 Звуки выключены', 'info');
+}
 const hp=s=>{let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return h.toString(36);};
 const r2p=r=>'voidr'+r.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,18);
 const ns=n=>n.replace(/[.#$[\]]/g,'_');
@@ -1548,6 +1614,10 @@ async function renderSettings(){
     </div>
   </div>
   <div class="set-sec">
+    <div class="set-sec-lbl">Уведомления</div>
+    <div class="set-row"><div><div class="set-rl">Звуки уведомлений</div><div class="set-rs">Звуковые сигналы для звонков и сообщений</div></div><label class="toggle"><input type="checkbox" id="s_sounds" ${soundsEnabled?'checked':''} onchange="toggleSounds()"><span class="toggle-sl"></span></label></div>
+  </div>
+  <div class="set-sec">
     <div class="set-sec-lbl">Внешний вид</div>
     <div class="set-row"><div><div class="set-rl">Акцентный цвет</div><div class="set-rs">Цвет кнопок и элементов</div></div>
       <div class="color-row">${COLORS.map(c=>`<div class="color-opt${accentColor===c?' sel':''}" style="background:${c}" onclick="setAccentColor('${c}')"></div>`).join('')}</div>
@@ -1806,6 +1876,7 @@ function listenNotifications(){
     // Remove notification after processing
     db.ref('notifications/'+ns(MN)+'/'+s.key).remove();
     if(n.type==='muted'){
+      playSound('notification');
       showToast(`🔇 Ты замьючен на ${n.mins} мин. администратором`,'warn');
       // Force mute microphone
       if(localStream){
@@ -1814,13 +1885,17 @@ function listenNotifications(){
         updateMicUI();
       }
     } else if(n.type==='kick_room'){
+      playSound('notification');
       showToast('⛔ Тебя кикнули из комнаты','err');
       hangup();
     } else if(n.type==='broadcast'){
+      playSound('notification');
       showToast('📣 [Admin] '+n.text,'info');
     } else if(n.type==='spam'){
+      playSound('notification');
       showToast('🔔 '+n.text,'info');
     } else if(n.type==='rename'){
+      playSound('notification');
       showToast('✏️ Администратор изменил твоё отображаемое имя на: '+n.newName,'warn');
     } else if(n.type==='ping'){
       // Just ignore pings but they cause toast spam
@@ -1832,6 +1907,7 @@ function listenNotifications(){
       // Show incoming DM call overlay
       showIncomingCall(n.from,null);
     } else if(n.type==='banned'){
+      playSound('notification');
       showToast('⛔ Ты забанен администратором','err');
       setTimeout(()=>doLogout(),2000);
     }
@@ -1986,6 +2062,7 @@ function callFriend(){
 }
 
 function showIncomingCall(from,room){
+  playSound('call'); // Play call sound
   // Check if it's a DM call or room call
   if(room){
     // Old room-based call
@@ -2557,8 +2634,9 @@ async function startSS(){
     }
   }
   catch(e){
-    console.error('Screen share error:',e);
-    sysMsg('⚠ демонстрация отменена');
+    console.error('Screen share error:', e);
+    console.error('Error details:', e.name, e.message);
+    sysMsg('⚠ демонстрация отменена: ' + e.message);
     return;
   }
   
@@ -2569,7 +2647,8 @@ async function startSS(){
     if(p.dataConn?.open)p.dataConn.send({type:'screen_start',nick:MN});
   });
   screenStream.getVideoTracks()[0].onended=()=>stopSS();
-  sysMsg(`📺 демонстрация ${ssQuality}p @ ${ssFPS} FPS`);
+  const qualityText = quality === 'source' ? 'Источник' : quality + 'p';
+  sysMsg(`📺 демонстрация ${qualityText} @ ${fps} FPS`);
 }
 function stopSS(silent){
   if(!screenStream)return;
@@ -2862,7 +2941,7 @@ window.addEventListener('load',()=>{
 });
 
 // ── AUTO-UPDATE ────────────────────────────────────────────
-const APP_VERSION='1.3.2';
+const APP_VERSION='1.3.3';
 
 // ── UPDATE NOTIFICATION BADGE ──────────────────────────────
 let updateAvailable = false;
