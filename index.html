@@ -237,22 +237,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .empty-t{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:1px}
 
 /* ── DM ── */
-#DM{display:none;flex:1;flex-direction:column;overflow:hidden}
+#DM{display:none;flex:1;flex-direction:column;overflow:hidden;position:relative}
 .dm-h{padding:13px 18px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:11px;background:var(--s1);flex-shrink:0}
 .dm-hav{width:32px;height:32px;border-radius:50%;background:rgba(79,200,168,.12);border:1px solid rgba(79,200,168,.3);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--a2);flex-shrink:0}
 .dm-hn{font-weight:700;font-size:15px;flex:1}
 .dm-hs{font-family:'Space Mono',monospace;font-size:11px;color:var(--mu)}
-.dm-call-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;border:1px solid rgba(79,200,168,.3);background:rgba(79,200,168,.08);cursor:pointer;transition:all .15s;color:var(--a2)}
-.dm-call-btn:hover{background:rgba(79,200,168,.18)}
-.dm-call-ui{padding:14px 18px;border-bottom:1px solid var(--b);background:rgba(79,200,168,.05);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.dm-call-ui.hidden{display:none}
-.dm-call-status{font-family:'Space Mono',monospace;font-size:12px;color:var(--a2);font-weight:600}
-.dm-call-controls{display:flex;gap:8px}
-.dm-call-ctrl{width:36px;height:36px;border-radius:50%;border:1px solid var(--b);background:var(--s2);color:var(--tx);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
-.dm-call-ctrl:hover{background:var(--s3);border-color:var(--bb)}
-.dm-call-ctrl.mut{background:rgba(247,106,138,.12);border-color:rgba(247,106,138,.3);color:var(--a3)}
-.dm-call-ctrl.hangup{background:rgba(247,106,138,.12);border-color:rgba(247,106,138,.3);color:var(--a3)}
-.dm-call-ctrl.hangup:hover{background:rgba(247,106,138,.22)}
 .dm-msgs{flex:1;overflow-y:auto;padding:13px 18px;display:flex;flex-direction:column;gap:7px}
 .dm-msgs::-webkit-scrollbar{width:4px}
 .dm-msgs::-webkit-scrollbar-thumb{background:var(--m2);border-radius:2px}
@@ -460,6 +449,22 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .update-close{width:24px;height:24px;border-radius:6px;border:none;background:var(--s2);color:var(--mu);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .update-close:hover{background:var(--s3);color:var(--tx)}
 audio{display:none}
+
+/* ── DM CALL UI ── */
+.dm-call-ui{position:absolute;top:0;left:0;right:0;background:linear-gradient(135deg,rgba(124,106,247,.15),rgba(79,200,168,.1));border-bottom:1px solid var(--b);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;z-index:10;animation:slideDown .3s ease}
+.dm-call-ui.hidden{display:none}
+.dm-call-status{font-family:'Space Mono',monospace;font-size:13px;color:var(--tx);font-weight:600;display:flex;align-items:center;gap:8px}
+.dm-call-status::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--a2);animation:pulse 2s infinite}
+.dm-call-controls{display:flex;gap:10px}
+.dm-call-ctrl{width:40px;height:40px;border-radius:50%;border:none;background:var(--s2);color:var(--tx);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;border:1px solid var(--b)}
+.dm-call-ctrl:hover{background:var(--s3);border-color:var(--bb);transform:scale(1.05)}
+.dm-call-ctrl.mut{background:rgba(247,106,138,.15);border-color:rgba(247,106,138,.3);color:var(--a3)}
+.dm-call-ctrl.hangup{background:rgba(247,106,138,.2);border-color:rgba(247,106,138,.4);color:var(--a3)}
+.dm-call-ctrl.hangup:hover{background:rgba(247,106,138,.3);transform:scale(1.05)}
+.dm-call-btn{width:32px;height:32px;border-radius:50%;border:none;background:rgba(79,200,168,.15);color:var(--a2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;border:1px solid rgba(79,200,168,.3)}
+.dm-call-btn:hover{background:rgba(79,200,168,.25);border-color:rgba(79,200,168,.5);transform:scale(1.05)}
+@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.2)}}
 
 /* ── CUSTOM TITLE BAR ── */
 .titlebar{
@@ -987,7 +992,7 @@ function toggleSounds() {
   setSetting('soundsEnabled', soundsEnabled);
   showToast(soundsEnabled ? '🔊 Звуки включены' : '🔇 Звуки выключены', 'info');
 }
-const hp=s=>{let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return h.toString(36);};
+const hp=s=>{let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return 'p'+Math.abs(h).toString(36);};
 const r2p=r=>'voidr'+r.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,18);
 const ns=n=>n.replace(/[.#$[\]]/g,'_');
 const dmKey=(a,b)=>[ns(a),ns(b)].sort().join('__');
@@ -2873,15 +2878,25 @@ async function toggleMic(){
 }
 function hangup(){
   stopSS(true);
-  Object.values(peers).forEach(p=>{try{p.mediaConn?.close();p.dataConn?.close();p.mySSCall?.close();p.inSSCall?.close();}catch(e){}});
+  Object.values(peers).forEach(p=>{
+    try{
+      p.mediaConn?.close();
+      p.dataConn?.close();
+      p.mySSCall?.close();
+      p.inSSCall?.close();
+    }catch(e){}
+    // Remove audio element for this peer
+    const audio=$('audio_'+p.mediaConn?.peer);
+    if(audio)audio.remove();
+  });
   peers={};
   if(myPeer){myPeer.destroy();myPeer=null;}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
   isMuted=false;isHost=false;room='';
   $('peersC').innerHTML='';
-  $('chatMsgs').innerHTML='';$('remoteAudio').srcObject=null;
+  $('chatMsgs').innerHTML='';
   hideRemoteSS();updateMicUI();
-  $('sbRooms').innerHTML=`<div class="sbi" onclick="showV('idle')"><div class="sbic room"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1C6 1 2 3.5 2 6.5a4 4 0 008 0C10 3.5 6 1 6 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6.5" r="1.2" fill="currentColor"/></svg></div><span class="sbn">Войти в канал</span></div>`;
+  $('sbRooms').innerHTML='';
   if(CV==='voice')showV('idle');
 }
 function copyLink(){
@@ -3120,7 +3135,7 @@ window.addEventListener('load',()=>{
 });
 
 // ── AUTO-UPDATE ────────────────────────────────────────────
-const APP_VERSION='1.3.4';
+const APP_VERSION='1.3.5';
 
 // ── UPDATE NOTIFICATION BADGE ──────────────────────────────
 let updateAvailable = false;
