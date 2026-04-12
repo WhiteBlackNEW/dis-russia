@@ -1,0 +1,41 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c6af7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4fc8a8;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="url(#bg)"/>
+  
+  <!-- Inner circle -->
+  <circle cx="128" cy="128" r="100" fill="#0a0a0f" opacity="0.9"/>
+  
+  <!-- Voice wave symbol -->
+  <g filter="url(#glow)">
+    <!-- Center microphone -->
+    <rect x="118" y="90" width="20" height="35" rx="10" fill="none" stroke="#7c6af7" stroke-width="4"/>
+    <path d="M 108 120 Q 108 135 128 135 Q 148 135 148 120" fill="none" stroke="#7c6af7" stroke-width="4" stroke-linecap="round"/>
+    <line x1="128" y1="135" x2="128" y2="150" stroke="#7c6af7" stroke-width="4" stroke-linecap="round"/>
+    <line x1="118" y1="150" x2="138" y2="150" stroke="#7c6af7" stroke-width="4" stroke-linecap="round"/>
+    
+    <!-- Sound waves -->
+    <path d="M 85 100 Q 80 115 85 130" fill="none" stroke="#4fc8a8" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+    <path d="M 70 95 Q 63 115 70 135" fill="none" stroke="#4fc8a8" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+    
+    <path d="M 171 100 Q 176 115 171 130" fill="none" stroke="#4fc8a8" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+    <path d="M 186 95 Q 193 115 186 135" fill="none" stroke="#4fc8a8" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  </g>
+  
+  <!-- "V" letter at bottom -->
+  <text x="128" y="190" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#7c6af7" text-anchor="middle">V</text>
+</svg>
