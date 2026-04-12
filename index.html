@@ -553,8 +553,6 @@ audio{display:none}
   </div>
 </div>
 
-<audio id="remoteAudio" autoplay playsinline></audio>
-
 <!-- AUTH -->
 <div id="AUTH">
   <div class="abox">
@@ -2098,10 +2096,21 @@ async function initDMCall(nick){
     call.on('stream',(remoteStream)=>{
       console.log('🔊 Received remote stream');
       $('dmCallStatus').textContent='В звонке с @'+nick;
-      const audio=new Audio();
+      
+      // Create audio element and add to DOM
+      const audio=document.createElement('audio');
+      audio.autoplay=true;
+      audio.id='dmCallAudio';
       audio.srcObject=remoteStream;
-      audio.play();
-      showToast('✅ Подключено к @'+nick,'info');
+      document.body.appendChild(audio);
+      
+      audio.play().then(()=>{
+        console.log('✅ Audio playing');
+        showToast('✅ Подключено к @'+nick,'info');
+      }).catch(e=>{
+        console.error('❌ Audio play error:', e);
+        showToast('⚠ Звук может не работать, кликни на страницу','warn');
+      });
     });
     
     call.on('close',()=>{
@@ -2151,6 +2160,10 @@ function hangupDMCall(){
     localStream.getTracks().forEach(t=>t.stop());
     localStream=null;
   }
+  
+  // Remove audio element
+  const audio=$('dmCallAudio');
+  if(audio)audio.remove();
   
   isMuted=false;
   $('dmMicBtn').classList.remove('mut');
@@ -2240,10 +2253,21 @@ async function answerDMCall(from){
     dmCallPeer.on('stream',(remoteStream)=>{
       console.log('🔊 Received remote stream');
       $('dmCallStatus').textContent='В звонке с @'+from;
-      const audio=new Audio();
+      
+      // Create audio element and add to DOM
+      const audio=document.createElement('audio');
+      audio.autoplay=true;
+      audio.id='dmCallAudio';
       audio.srcObject=remoteStream;
-      audio.play();
-      showToast('✅ Подключено к @'+from,'info');
+      document.body.appendChild(audio);
+      
+      audio.play().then(()=>{
+        console.log('✅ Audio playing');
+        showToast('✅ Подключено к @'+from,'info');
+      }).catch(e=>{
+        console.error('❌ Audio play error:', e);
+        showToast('⚠ Звук может не работать, кликни на страницу','warn');
+      });
     });
     
     dmCallPeer.on('close',()=>{
@@ -2345,7 +2369,15 @@ function joinAsGuest(hostId){
   isHost=false;
   myPeer=new Peer('voidg'+Math.random().toString(36).slice(2,10),PC);
   myPeer.on('call',call=>{
-    if(call.metadata&&call.metadata.type==='screen'){call.answer(new MediaStream());handleIncomingSS(call);}
+    const isSS=call.metadata&&call.metadata.type==='screen';
+    if(isSS){
+      call.answer(new MediaStream());
+      handleIncomingSS(call);
+    }else{
+      // Answer audio call
+      call.answer(localStream);
+      handleMediaConn(call);
+    }
   });
   myPeer.on('open',()=>{
     setIdleLog('— звоним хосту —');enterCallUI();sysMsg('Ты вошёл в комнату #'+room+' как @'+MN);
@@ -2373,7 +2405,19 @@ function handleMediaConn(call){
   const pid=call.peer;
   if(!peers[pid])peers[pid]={};peers[pid].mediaConn=call;
   call.on('stream',stream=>{
-    $('remoteAudio').srcObject=stream;
+    console.log('🔊 Received audio stream from:', pid);
+    
+    // Create dedicated audio element for this peer
+    let audio=$('audio_'+pid);
+    if(!audio){
+      audio=document.createElement('audio');
+      audio.id='audio_'+pid;
+      audio.autoplay=true;
+      document.body.appendChild(audio);
+    }
+    audio.srcObject=stream;
+    audio.play().catch(e=>console.error('Audio play error:', e));
+    
     const nick=(call.metadata&&call.metadata.nick)?call.metadata.nick:pid;
     addPeerTile(pid,nick,!!(call.metadata&&call.metadata.isAdmin));
     sysMsg('🔗 подключён @'+nick);
@@ -2467,9 +2511,13 @@ function removePeer(pid){
   const p=peers[pid];if(!p)return;
   const tile=$('pt_'+pid);
   if(tile)tile.remove();
+  
+  // Remove audio element for this peer
+  const audio=$('audio_'+pid);
+  if(audio)audio.remove();
+  
   try{p.mediaConn?.close();p.dataConn?.close();p.mySSCall?.close();p.inSSCall?.close();}catch(e){}
   const nick=p.nick||pid;delete peers[pid];
-  $('remoteAudio').srcObject=null;
   hideRemoteSS();sysMsg('@'+nick+' отключился');
 }
 function kickPeer(pid){
@@ -3072,7 +3120,7 @@ window.addEventListener('load',()=>{
 });
 
 // ── AUTO-UPDATE ────────────────────────────────────────────
-const APP_VERSION='1.3.3';
+const APP_VERSION='1.3.4';
 
 // ── UPDATE NOTIFICATION BADGE ──────────────────────────────
 let updateAvailable = false;
