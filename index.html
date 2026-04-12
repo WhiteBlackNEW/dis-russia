@@ -1194,9 +1194,54 @@ async function initApp(){
     $('sbNm').textContent='@'+MN;
   }
   presRef=db.ref('presence/'+ns(MN));
-  presRef.set({online:true,ts:Date.now()});
+  
+  // Create peer for DM calls and save ID to presence
+  const initPeer = async () => {
+    if(myPeer) return;
+    
+    const pid=hp(MN+Date.now()+Math.random());
+    myPeer=new Peer(pid,{
+      host:'0.peerjs.com',
+      port:443,
+      path:'/',
+      secure:true,
+      config:{
+        iceServers:[
+          {urls:'stun:stun.l.google.com:19302'},
+          {urls:'stun:stun1.l.google.com:19302'},
+          {urls:'stun:stun2.l.google.com:19302'}
+        ]
+      }
+    });
+    
+    return new Promise((resolve) => {
+      myPeer.on('open',(id)=>{
+        console.log('Peer opened with ID:', id);
+        presRef.set({online:true,ts:Date.now(),peerId:id});
+        resolve();
+      });
+      
+      myPeer.on('error',(e)=>{
+        console.error('Peer error:',e);
+        // Try to set presence anyway
+        presRef.set({online:true,ts:Date.now()});
+        resolve();
+      });
+      
+      // Listen for incoming DM calls
+      myPeer.on('call',(call)=>{
+        if(call.metadata?.type==='dm_call'){
+          console.log('Incoming DM call from:', call.metadata.nick);
+        }
+      });
+    });
+  };
+  
+  // Initialize peer and wait for it
+  await initPeer();
+  
   presRef.onDisconnect().remove();
-  setInterval(()=>{if(CU)presRef.set({online:true,ts:Date.now()});},20000);
+  setInterval(()=>{if(CU&&myPeer)presRef.set({online:true,ts:Date.now(),peerId:myPeer.id});},20000);
   listenFriends();
   listenNotifications();
   if(MY_ROLE==='admin'||MY_ROLE==='moder')listenAdmin();
@@ -1968,26 +2013,18 @@ function callFriendByNick(nick){
 }
 
 async function initDMCall(nick){
+  console.log('initDMCall called, myPeer:', myPeer, 'myPeer.id:', myPeer?.id);
+  
   if(!myPeer){
-    // Create peer if not exists
-    const pid=hp(MN+Date.now());
-    myPeer=new Peer(pid,{
-      host:'0.peerjs.com',
-      port:443,
-      path:'/',
-      secure:true,
-      config:{
-        iceServers:[
-          {urls:'stun:stun.l.google.com:19302'},
-          {urls:'stun:stun1.l.google.com:19302'}
-        ]
-      }
-    });
-    
-    await new Promise((resolve)=>{
-      myPeer.on('open',()=>resolve());
-      myPeer.on('error',(e)=>{console.error('Peer error:',e);resolve();});
-    });
+    showToast('⏳ Подключение...','info');
+    // Wait a bit for peer to initialize
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  if(!myPeer || !myPeer.id){
+    showToast('❌ Ошибка подключения. Перезайди в приложение','err');
+    hangupDMCall();
+    return;
   }
   
   // Get friend's peer ID from presence
@@ -1999,35 +2036,54 @@ async function initDMCall(nick){
   }
   
   const friendData=snap.val();
+  console.log('Friend data:', friendData);
+  
   if(!friendData.peerId){
-    showToast('❌ Не удалось подключиться','err');
+    showToast('❌ Друг не поддерживает звонки (старая версия)','err');
     hangupDMCall();
     return;
   }
+  
+  console.log('Calling friend:', nick, 'with peerId:', friendData.peerId);
   
   // Get local stream
   try{
     localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
   }catch(e){
+    console.error('Microphone error:', e);
     showToast('❌ Нет доступа к микрофону','err');
     hangupDMCall();
     return;
   }
   
   // Call friend
-  const call=myPeer.call(friendData.peerId,localStream,{metadata:{nick:MN,type:'dm_call'}});
-  dmCallPeer=call;
-  
-  call.on('stream',(remoteStream)=>{
-    $('dmCallStatus').textContent='В звонке с @'+nick;
-    const audio=new Audio();
-    audio.srcObject=remoteStream;
-    audio.play();
-  });
-  
-  call.on('close',()=>{
+  try{
+    const call=myPeer.call(friendData.peerId,localStream,{metadata:{nick:MN,type:'dm_call'}});
+    dmCallPeer=call;
+    
+    call.on('stream',(remoteStream)=>{
+      console.log('Received remote stream');
+      $('dmCallStatus').textContent='В звонке с @'+nick;
+      const audio=new Audio();
+      audio.srcObject=remoteStream;
+      audio.play();
+    });
+    
+    call.on('close',()=>{
+      console.log('Call closed');
+      hangupDMCall();
+    });
+    
+    call.on('error',(e)=>{
+      console.error('Call error:',e);
+      showToast('❌ Ошибка звонка: ' + e.type,'err');
+      hangupDMCall();
+    });
+  }catch(e){
+    console.error('Call creation error:', e);
+    showToast('❌ Не удалось позвонить','err');
     hangupDMCall();
-  });
+  }
 }
 
 function toggleDMMic(){
@@ -2110,26 +2166,13 @@ function acceptCall(){
 }
 
 async function answerDMCall(from){
-  if(!myPeer){
-    const pid=hp(MN+Date.now());
-    myPeer=new Peer(pid,{
-      host:'0.peerjs.com',
-      port:443,
-      path:'/',
-      secure:true,
-      config:{
-        iceServers:[
-          {urls:'stun:stun.l.google.com:19302'},
-          {urls:'stun:stun1.l.google.com:19302'}
-        ]
-      }
-    });
-    
-    await new Promise((resolve)=>{
-      myPeer.on('open',()=>resolve());
-      myPeer.on('error',(e)=>{console.error('Peer error:',e);resolve();});
-    });
+  if(!myPeer || !myPeer.id){
+    showToast('❌ Ошибка подключения','err');
+    hangupDMCall();
+    return;
   }
+  
+  console.log('Answering DM call from:', from);
   
   // Get local stream
   try{
@@ -2140,13 +2183,16 @@ async function answerDMCall(from){
     return;
   }
   
-  // Listen for incoming call
-  myPeer.on('call',(call)=>{
+  // Listen for incoming call (peer already has listener from initApp)
+  const handleCall = (call) => {
+    console.log('Incoming call:', call.metadata);
     if(call.metadata?.type==='dm_call'&&call.metadata?.nick===from){
+      console.log('Answering call from:', from);
       call.answer(localStream);
       dmCallPeer=call;
       
       call.on('stream',(remoteStream)=>{
+        console.log('Received remote stream');
         $('dmCallStatus').textContent='В звонке с @'+from;
         const audio=new Audio();
         audio.srcObject=remoteStream;
@@ -2154,10 +2200,21 @@ async function answerDMCall(from){
       });
       
       call.on('close',()=>{
+        console.log('Call closed');
         hangupDMCall();
       });
+      
+      call.on('error',(e)=>{
+        console.error('Call error:',e);
+        hangupDMCall();
+      });
+      
+      // Remove listener after handling
+      myPeer.off('call', handleCall);
     }
-  });
+  };
+  
+  myPeer.on('call', handleCall);
 }
 
 function declineCall(){
