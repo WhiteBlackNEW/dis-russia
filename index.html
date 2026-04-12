@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Void</title>
 <link rel="icon" href="data:,">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 :root{--bg:#0a0a0f;--s1:#111118;--s2:#16161f;--s3:#1c1c28;--b:rgba(255,255,255,.06);--bb:rgba(255,255,255,.14);--ac:#7c6af7;--a2:#4fc8a8;--a3:#f76a8a;--tx:#e8e8f0;--mu:#5a5a72;--m2:#3a3a50}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--tx);height:100vh;overflow:hidden}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tx);height:100vh;overflow:hidden}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 600px 400px at 15% 50%,rgba(124,106,247,.07) 0%,transparent 70%),radial-gradient(ellipse 500px 300px at 85% 20%,rgba(79,200,168,.04) 0%,transparent 70%)}
 
 /* ── AUTH ── */
@@ -34,6 +34,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .ain{width:100%;background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:11px 14px 11px 32px;color:var(--tx);font-family:'Space Mono',monospace;font-size:13px;outline:none;transition:border-color .2s}
 .ain::placeholder{color:var(--mu)}
 .ain:focus{border-color:rgba(124,106,247,.45);box-shadow:0 0 0 3px rgba(124,106,247,.08)}
+.pass-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:4px;opacity:.5;transition:opacity .2s;line-height:1}
+.pass-eye:hover{opacity:1}
+.pass-eye-set{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:4px;opacity:.5;transition:opacity .2s;line-height:1;z-index:1}
+.pass-eye-set:hover{opacity:1}
 .abtn{width:100%;padding:12px;background:var(--ac);color:#fff;font-family:'Syne',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 16px rgba(124,106,247,.28);transition:all .15s}
 .abtn:hover{background:#8d7ef8}
 .alog{font-family:'Space Mono',monospace;font-size:11px;text-align:center;margin-top:12px;min-height:16px;color:var(--mu)}
@@ -176,7 +180,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .vc-msgs{flex:1;overflow-y:auto;padding:9px 12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
 .vc-msgs::-webkit-scrollbar{width:3px}
 .vc-msgs::-webkit-scrollbar-thumb{background:var(--m2);border-radius:2px}
-.vc-ir{display:flex;gap:5px;padding:9px 10px 12px;border-top:1px solid var(--b);flex-shrink:0}
+.vc-ir{display:flex;gap:5px;padding:9px 10px 12px;border-top:1px solid var(--b);flex-shrink:0;position:relative}
 .vc-cin{flex:1;background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:7px 11px;color:var(--tx);font-family:'Syne',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
 .vc-cin:focus{border-color:rgba(124,106,247,.4)}
 .vc-cin::placeholder{color:var(--mu)}
@@ -238,12 +242,32 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .dm-msgs{flex:1;overflow-y:auto;padding:13px 18px;display:flex;flex-direction:column;gap:7px}
 .dm-msgs::-webkit-scrollbar{width:4px}
 .dm-msgs::-webkit-scrollbar-thumb{background:var(--m2);border-radius:2px}
-.dm-ir{display:flex;gap:7px;padding:10px 18px 14px;border-top:1px solid var(--b);flex-shrink:0;background:var(--s1)}
+.dm-ir{display:flex;gap:7px;padding:10px 18px 14px;border-top:1px solid var(--b);flex-shrink:0;background:var(--s1);position:relative}
 .dm-in{flex:1;background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:9px 13px;color:var(--tx);font-family:'Syne',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
 .dm-in:focus{border-color:rgba(124,106,247,.4)}
 .dm-in::placeholder{color:var(--mu)}
 .dm-sb{width:38px;height:38px;border-radius:10px;background:var(--ac);border:none;color:#fff;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .dm-sb:hover{background:#8d7ef8}
+.emoji-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--b);background:var(--s2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.emoji-btn:hover{border-color:var(--bb);background:var(--s3)}
+.gif-btn{width:44px;height:34px;border-radius:8px;border:1px solid var(--b);background:var(--s2);cursor:pointer;font-size:11px;font-weight:700;color:var(--mu);display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.gif-btn:hover{border-color:var(--bb);background:var(--s3);color:var(--tx)}
+.emoji-picker{position:absolute;bottom:60px;left:18px;width:320px;max-width:calc(100vw - 36px);background:var(--s1);border:1px solid var(--b);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:100;display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:240px;overflow-y:auto}
+.emoji-picker.hidden{display:none}
+.emoji-picker button{background:none;border:none;font-size:24px;cursor:pointer;padding:6px;border-radius:6px;transition:background .15s}
+.emoji-picker button:hover{background:var(--s2)}
+.gif-picker{position:absolute;bottom:60px;left:18px;width:380px;max-width:calc(100vw - 36px);background:var(--s1);border:1px solid var(--b);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:100;max-height:400px;display:flex;flex-direction:column;gap:10px}
+.gif-picker.hidden{display:none}
+.gif-search{display:flex;gap:6px}
+.gif-search-input{flex:1;background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:8px 12px;color:var(--tx);font-size:13px;outline:none}
+.gif-search-input:focus{border-color:rgba(124,106,247,.4)}
+.gif-search-btn{width:36px;height:36px;border-radius:8px;background:var(--ac);border:none;color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.gif-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:300px;overflow-y:auto}
+.gif-grid::-webkit-scrollbar{width:4px}
+.gif-grid::-webkit-scrollbar-thumb{background:var(--m2);border-radius:2px}
+.gif-item{width:100%;height:100px;object-fit:cover;border-radius:6px;cursor:pointer;transition:transform .15s}
+.gif-item:hover{transform:scale(1.05)}
+.gif-loading,.gif-error{text-align:center;padding:20px;color:var(--mu);font-size:13px}
 
 /* ── SETTINGS ── */
 #SETTINGS{display:none;flex:1;flex-direction:column;overflow:hidden}
@@ -272,6 +296,9 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .set-btn:hover{border-color:var(--bb);color:var(--tx)}
 .set-btn.danger{border-color:rgba(247,106,138,.3);color:var(--a3);background:rgba(247,106,138,.06)}
 .set-btn.danger:hover{background:rgba(247,106,138,.14)}
+.set-select{padding:8px 12px;border-radius:8px;border:1px solid var(--b);background:var(--s2);color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;outline:none;transition:all .15s;min-width:200px}
+.set-select:hover{border-color:var(--bb)}
+.set-select:focus{border-color:rgba(124,106,247,.45)}
 .color-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .color-opt{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
 .color-opt.sel{border-color:#fff;transform:scale(1.15)}
@@ -296,6 +323,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .msg-nick.mine{color:var(--ac)}.msg-nick.theirs{color:var(--a2)}
 .msg-txt{font-size:13px;line-height:1.5;color:var(--tx);word-break:break-word}
 .msg-txt.sys{color:var(--mu);font-style:italic;font-size:11px}
+.msg-gif{max-width:200px;max-height:200px;border-radius:8px;margin-top:6px;display:block;cursor:pointer}
 
 /* ── CALL OVERLAY ── */
 #CALLOVER{display:none;position:fixed;inset:0;z-index:300;align-items:center;justify-content:center;background:rgba(10,10,15,.85);backdrop-filter:blur(12px)}
@@ -353,10 +381,112 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 @keyframes fup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fin{from{opacity:0}to{opacity:1}}
 @keyframes blk{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── UPDATE BANNER ── */
+.update-banner{position:fixed;top:20px;right:20px;z-index:9999;animation:fup .4s ease}
+.update-content{background:linear-gradient(135deg,var(--s1),var(--s2));border:1px solid var(--bb);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:400px}
+.update-icon{font-size:28px;flex-shrink:0}
+.update-text{flex:1;min-width:0}
+.update-title{font-weight:700;font-size:14px;color:var(--tx);margin-bottom:2px}
+.update-sub{font-size:12px;color:var(--mu)}
+.update-btn{padding:8px 16px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.update-btn:hover{background:#8d7ef8}
+.update-close{width:24px;height:24px;border-radius:6px;border:none;background:var(--s2);color:var(--mu);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.update-close:hover{background:var(--s3);color:var(--tx)}
 audio{display:none}
+
+/* ── CUSTOM TITLE BAR ── */
+.titlebar{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  height:32px;
+  background:var(--s1);
+  border-bottom:1px solid var(--b);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 12px;
+  z-index:9999;
+  -webkit-app-region:drag;
+  user-select:none;
+}
+.titlebar-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.titlebar-brand{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+}
+.titlebar-name{
+  font-weight:800;
+  font-size:14px;
+  letter-spacing:-0.5px;
+  color:#fff;
+}
+.titlebar-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  color:var(--ac);
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  padding:1px 5px;
+  border:1px solid rgba(124,106,247,.3);
+  border-radius:2px;
+  background:rgba(124,106,247,.08);
+}
+.titlebar-controls{
+  display:flex;
+  gap:1px;
+  -webkit-app-region:no-drag;
+}
+.titlebar-btn{
+  width:46px;
+  height:32px;
+  border:none;
+  background:transparent;
+  color:var(--mu);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:background .15s;
+  font-size:16px;
+  font-weight:300;
+}
+.titlebar-btn:hover{
+  background:rgba(255,255,255,.05);
+  color:var(--tx);
+}
+.titlebar-btn.close:hover{
+  background:#e81123;
+  color:#fff;
+}
+#APP{padding-top:32px}
+#AUTH{padding-top:32px}
+
 </style>
 </head>
 <body>
+<!-- CUSTOM TITLE BAR -->
+<div class="titlebar" id="titlebar">
+  <div class="titlebar-title">
+    <div class="titlebar-brand">
+      <span class="titlebar-name">void</span>
+      <span class="titlebar-tag">voice</span>
+    </div>
+  </div>
+  <div class="titlebar-controls">
+    <button class="titlebar-btn" onclick="minimizeWindow()" title="Свернуть">−</button>
+    <button class="titlebar-btn" onclick="maximizeWindow()" title="Развернуть">□</button>
+    <button class="titlebar-btn close" onclick="closeWindow()" title="Закрыть">✕</button>
+  </div>
+</div>
+
 <audio id="remoteAudio" autoplay playsinline></audio>
 
 <!-- AUTH -->
@@ -373,16 +503,16 @@ audio{display:none}
           <label class="afl">Ник</label>
           <div class="aiw"><span class="aip">@</span><input class="ain" id="lNick" placeholder="твой_ник" maxlength="24" autocomplete="off" spellcheck="false"/></div>
           <label class="afl">Пароль</label>
-          <div class="aiw"><span class="aip" style="font-size:10px">🔑</span><input class="ain" id="lPass" type="password" placeholder="••••••••" autocomplete="off"/></div>
+          <div class="aiw"><span class="aip" style="font-size:10px">🔑</span><input class="ain" id="lPass" type="password" placeholder="••••••••" autocomplete="off"/><button class="pass-eye" onclick="togglePassVis('lPass')" type="button" title="Показать пароль">👁️</button></div>
           <button class="abtn" onclick="doLogin()">Войти</button>
         </div>
         <div id="regF" style="display:none">
           <label class="afl">Ник (a-z, 0-9, _)</label>
           <div class="aiw"><span class="aip">@</span><input class="ain" id="rNick" placeholder="kruto_nick" maxlength="24" autocomplete="off" spellcheck="false"/></div>
           <label class="afl">Пароль</label>
-          <div class="aiw"><span class="aip" style="font-size:10px">🔑</span><input class="ain" id="rPass" type="password" placeholder="••••••••" autocomplete="off"/></div>
+          <div class="aiw"><span class="aip" style="font-size:10px">🔑</span><input class="ain" id="rPass" type="password" placeholder="••••••••" autocomplete="off"/><button class="pass-eye" onclick="togglePassVis('rPass')" type="button" title="Показать пароль">👁️</button></div>
           <label class="afl">Повтори пароль</label>
-          <div class="aiw"><span class="aip" style="font-size:10px">🔑</span><input class="ain" id="rPass2" type="password" placeholder="••••••••" autocomplete="off"/></div>
+          <div class="aiw"><span class="aip" style="font-size:10px">🔑</span><input class="ain" id="rPass2" type="password" placeholder="••••••••" autocomplete="off"/><button class="pass-eye" onclick="togglePassVis('rPass2')" type="button" title="Показать пароль">👁️</button></div>
           <button class="abtn" onclick="doReg()">Создать аккаунт</button>
         </div>
         <div class="alog" id="aLog"></div>
@@ -466,7 +596,6 @@ audio{display:none}
                 <div class="viz" id="myViz"><div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div></div>
               </div>
               <div id="peersC"></div>
-              <div class="p-tile" id="waitTile"><div class="pav wait" style="font-size:15px">···</div><div><div class="pnm" style="color:var(--mu)">Ждём...</div><div class="pst">скинь ссылку</div></div></div>
             </div>
             <div class="inv"><div class="inv-lbl">Ссылка-приглашение</div><div class="inv-row"><input class="inv-url" id="invUrl" readonly/><button class="btn-cp" id="cpBtn" onclick="copyLink()">COPY</button></div></div>
             <div class="vc-ctrl">
@@ -478,7 +607,18 @@ audio{display:none}
               <button class="cv cv-hang" onclick="hangup()" title="Выйти"><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M2 9C2 7.7 2.7 6.5 3.6 5.7c1.6-1.4 3.5-2.2 4.9-2.2s3.3.8 4.9 2.2A4.3 4.3 0 0115 9c0 .8-.4 1.4-1 1.8l-1.6 1c-.7.4-1.5.1-1.8-.6l-.9-1.7c-.4-.7-.1-1.5.5-1.8.3-.2.4-.6.3-1C10 6.9 9.3 6.5 8.5 6.5s-1.5.4-2 1.2c-.1.4.0.8.3 1 .6.3.9 1.1.5 1.8l-.9 1.7c-.3.7-1.1 1-1.8.6L3 11.8C2.4 11.4 2 10.8 2 10V9z" fill="var(--a3)" opacity=".9"/></svg></button>
             </div>
           </div>
-          <div class="vc-chat"><div class="vc-ch">Чат</div><div class="vc-msgs" id="chatMsgs"></div><div class="vc-ir"><input class="vc-cin" id="chatIn" placeholder="Сообщение..." maxlength="300" autocomplete="off" spellcheck="false"/><button class="vc-sb" onclick="sendChat()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 12.5L12.5 7 1.5 1.5V5.8l7 1.2-7 1.2z" fill="white"/></svg></button></div></div>
+          <div class="vc-chat">
+            <div class="vc-ch">Чат</div>
+            <div class="vc-msgs" id="chatMsgs"></div>
+            <div class="vc-ir">
+              <button class="emoji-btn" onclick="toggleEmojiPicker('chat')" title="Эмодзи">😊</button>
+              <button class="gif-btn" onclick="toggleGifPicker('chat')" title="GIF">GIF</button>
+              <input class="vc-cin" id="chatIn" placeholder="Сообщение..." maxlength="300" autocomplete="off" spellcheck="false"/>
+              <button class="vc-sb" onclick="sendChat()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 12.5L12.5 7 1.5 1.5V5.8l7 1.2-7 1.2z" fill="white"/></svg></button>
+            </div>
+            <div class="emoji-picker hidden" id="emojiPickerChat"></div>
+            <div class="gif-picker hidden" id="gifPickerChat"></div>
+          </div>
         </div>
       </div>
 
@@ -506,7 +646,14 @@ audio{display:none}
           <button class="dm-call-btn" id="dmCallBtn" onclick="callFriend()" title="Позвонить"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5.5C2 4.1 2.7 3 3.6 2.3c.7-.6 1.4-.8 2.4-.8.5 0 1 .4 1.1 1L7.7 4c.2.6-.1 1.3-.7 1.5-.3.1-.4.4-.3.7C7 7 8 8 8.8 8.3c.3.1.6 0 .7-.3.2-.6.9-.9 1.5-.7l1.5.6c.6.1 1 .6 1 1.1 0 1-.2 1.7-.8 2.4-.7.9-1.8 1.6-3.2 1.6C5.4 13 2 9.3 2 5.5z" fill="var(--a2)" opacity=".9"/></svg></button>
         </div>
         <div class="dm-msgs" id="dmMsgs"></div>
-        <div class="dm-ir"><input class="dm-in" id="dmIn" placeholder="Написать сообщение..." maxlength="500" autocomplete="off" spellcheck="false"/><button class="dm-sb" onclick="sendDM()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 12.5L12.5 7 1.5 1.5V5.8l7 1.2-7 1.2z" fill="white"/></svg></button></div>
+        <div class="dm-ir">
+          <button class="emoji-btn" onclick="toggleEmojiPicker('dm')" title="Эмодзи">😊</button>
+          <button class="gif-btn" onclick="toggleGifPicker('dm')" title="GIF">GIF</button>
+          <input class="dm-in" id="dmIn" placeholder="Написать сообщение..." maxlength="500" autocomplete="off" spellcheck="false"/>
+          <button class="dm-sb" onclick="sendDM()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 12.5L12.5 7 1.5 1.5V5.8l7 1.2-7 1.2z" fill="white"/></svg></button>
+        </div>
+        <div class="emoji-picker hidden" id="emojiPickerDM"></div>
+        <div class="gif-picker hidden" id="gifPickerDM"></div>
       </div>
 
       <!-- SETTINGS -->
@@ -563,6 +710,31 @@ audio{display:none}
 </div>
 
 <script>
+// ── UTILS (ОПРЕДЕЛЯЕМ СНАЧАЛА!) ────────────────────────────
+const $=id=>document.getElementById(id);
+const getSetting=(k,def)=>{try{return JSON.parse(localStorage.getItem('vs_'+k))??def;}catch{return def;}};
+const setSetting=(k,v)=>localStorage.setItem('vs_'+k,JSON.stringify(v));
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const hp=s=>{let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return h.toString(36);};
+const r2p=r=>'voidr'+r.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,18);
+const ns=n=>n.replace(/[.#$[\]]/g,'_');
+const dmKey=(a,b)=>[ns(a),ns(b)].sort().join('__');
+
+// Toggle password visibility
+function togglePassVis(inputId){
+  const inp=$(inputId);
+  const btn=inp.nextElementSibling;
+  if(inp.type==='password'){
+    inp.type='text';
+    btn.textContent='🙈';
+    btn.title='Скрыть пароль';
+  }else{
+    inp.type='password';
+    btn.textContent='👁️';
+    btn.title='Показать пароль';
+  }
+}
+
 // ════════════════════════════════════════════════════════════
 //  FIREBASE
 // ════════════════════════════════════════════════════════════
@@ -578,31 +750,50 @@ firebase.initializeApp({
 const db=firebase.database();
 const ADMIN='whiteblack';
 
-// PeerJS config with many STUN servers for Russia
-const PC={host:'0.peerjs.com',port:443,path:'/',secure:true,debug:0,
+// PeerJS servers pool with auto-switching
+const PEERJS_SERVERS=[
+  {host:'0.peerjs.com',port:443,path:'/',secure:true},
+  {host:'peerjs-server.herokuapp.com',port:443,path:'/',secure:true},
+  {host:'peerjs.92k.de',port:443,path:'/',secure:true}
+];
+let currentServerIndex=getSetting('peerServerIndex',0);
+const PC={
+  ...PEERJS_SERVERS[currentServerIndex],
+  debug:0,
   config:{iceServers:[
+    // Google STUN servers
     {urls:'stun:stun.l.google.com:19302'},
     {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun2.l.google.com:19302'},
+    {urls:'stun:stun3.l.google.com:19302'},
+    {urls:'stun:stun4.l.google.com:19302'},
+    // Russian STUN servers
+    {urls:'stun:stun.voipbuster.com'},
+    {urls:'stun:stun.voipstunt.com'},
+    {urls:'stun:stun.voxgratia.org'},
     {urls:'stun:stun.ekiga.net'},
     {urls:'stun:stun.ideasip.com'},
     {urls:'stun:stun.schlund.de'},
     {urls:'stun:stun.voiparound.com'},
-    {urls:'stun:stun.voipbuster.com'},
+    {urls:'stun:stun.stunprotocol.org:3478'},
+    {urls:'stun:stun.sipnet.net:3478'},
+    {urls:'stun:stun.sipnet.ru:3478'},
+    {urls:'stun:stun.comtube.ru:3478'},
+    {urls:'stun:stun.comtube.com:3478'},
+    // TURN servers
     {urls:'turn:a.relay.metered.ca:80',username:'free',credential:'free'},
     {urls:'turn:a.relay.metered.ca:443',username:'free',credential:'free'},
-    {urls:'turn:a.relay.metered.ca:443?transport=tcp',username:'free',credential:'free'}
+    {urls:'turn:a.relay.metered.ca:443?transport=tcp',username:'free',credential:'free'},
+    {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+    {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'}
   ]}
 };
-
-// ── UTILS ──────────────────────────────────────────────────
-const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const hp=s=>{let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return h.toString(36);};
-const r2p=r=>'voidr'+r.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,18);
-const ns=n=>n.replace(/[.#$[\]]/g,'_');
-const dmKey=(a,b)=>[ns(a),ns(b)].sort().join('__');
-const $=id=>document.getElementById(id);
-const getSetting=(k,def)=>{try{return JSON.parse(localStorage.getItem('vs_'+k))??def;}catch{return def;}};
-const setSetting=(k,v)=>localStorage.setItem('vs_'+k,JSON.stringify(v));
+function switchPeerServer(){
+  currentServerIndex=(currentServerIndex+1)%PEERJS_SERVERS.length;
+  setSetting('peerServerIndex',currentServerIndex);
+  showToast('🔄 Переключение на сервер '+(currentServerIndex+1),'info');
+  setTimeout(()=>location.reload(),1500);
+}
 
 // ── AUTH ───────────────────────────────────────────────────
 let CU=null,MN='';
@@ -671,13 +862,21 @@ function renderSaved(){
 }
 
 // ── APP INIT ───────────────────────────────────────────────
-let presRef=null,fListener=null,dmListeners={},admListener=null;
-function initApp(){
+let presRef=null,fListener=null,dmListeners={},admListener=null,MY_ROLE='user';
+async function initApp(){
+  // Load user role from Firebase
+  const userSnap=await db.ref('users/'+ns(MN)).get();
+  if(userSnap.exists()){
+    const userData=userSnap.val();
+    MY_ROLE=userData.role||'user'; // admin, moder, or user
+  }
+  
   $('sbAv').textContent=MN.slice(0,2).toUpperCase();
   $('myAv').textContent=MN.slice(0,2).toUpperCase();
   $('myNmEl').textContent=MN;
-  if(MN===ADMIN){
-    $('sbNm').innerHTML='@'+MN+' <span class="bdg-adm">ADMIN</span>';
+  if(MY_ROLE==='admin'||MY_ROLE==='moder'){
+    const roleLabel=MY_ROLE==='admin'?'ADMIN':'MODER';
+    $('sbNm').innerHTML='@'+MN+' <span class="bdg-adm">'+roleLabel+'</span>';
     if(!$('admSbBtn')){
       const b=document.createElement('div');b.id='admSbBtn';b.className='sbi';
       b.onclick=()=>showV('admin');
@@ -693,7 +892,7 @@ function initApp(){
   setInterval(()=>{if(CU)presRef.set({online:true,ts:Date.now()});},20000);
   listenFriends();
   listenNotifications();
-  if(MN===ADMIN)listenAdmin();
+  if(MY_ROLE==='admin'||MY_ROLE==='moder')listenAdmin();
   renderSidebarDMs();renderPendingBadge();
   showV('idle');
 }
@@ -711,7 +910,7 @@ function showV(v,extra){
   else if(v==='friends'){show('FRIENDS');CV='friends';renderFList(fTab);$('sbFriendsBtn').classList.add('on');}
   else if(v==='dm'){show('DM');CDN=extra;CV='dm';openDM(extra);}
   else if(v==='settings'){show('SETTINGS');CV='settings';renderSettings();}
-  else if(v==='admin'&&MN===ADMIN){show('ADMIN');CV='admin';renderAdmin();$('admSbBtn')?.classList.add('on');}
+  else if(v==='admin'&&(MY_ROLE==='admin'||MY_ROLE==='moder')){show('ADMIN');CV='admin';renderAdmin();$('admSbBtn')?.classList.add('on');}
 }
 
 // ── PRESENCE ───────────────────────────────────────────────
@@ -723,10 +922,14 @@ async function isOn(nick){
 
 // ── FRIENDS ────────────────────────────────────────────────
 let fTab='online';
+let friendsListenerActive=false;
 function listenFriends(){
+  if(friendsListenerActive)return;
+  friendsListenerActive=true;
   if(fListener)db.ref('friends/'+ns(MN)).off('value',fListener);
   fListener=db.ref('friends/'+ns(MN)).on('value',()=>{
-    renderPendingBadge();renderSidebarDMs();
+    renderPendingBadge();
+    renderSidebarDMs();
     if(CV==='friends')renderFList(fTab);
   });
 }
@@ -751,26 +954,32 @@ async function sendFReq(){
     const st=ms.val().status;
     if(st==='friend'){log('⚠ уже друзья','err');return;}
     if(st==='out'){log('⚠ заявка уже отправлена','err');return;}
-    if(st==='in'){await acceptFriend(target);log('✓ взаимная — теперь вы друзья!','ok');inp.value='';return;}
+    if(st==='in'){
+      await acceptFriend(target);
+      log('✓ взаимная — теперь вы друзья!','ok');
+      inp.value='';
+      return;
+    }
   }
   await db.ref('friends/'+ns(MN)+'/'+ns(target)).set({status:'out',ts:Date.now()});
   await db.ref('friends/'+ns(target)+'/'+ns(MN)).set({status:'in',ts:Date.now()});
-  inp.value='';log('✓ заявка отправлена @'+target,'ok');
+  inp.value='';
+  log('✓ заявка отправлена @'+target,'ok');
 }
 async function acceptFriend(nick){
   await db.ref('friends/'+ns(MN)+'/'+ns(nick)).set({status:'friend',ts:Date.now()});
   await db.ref('friends/'+ns(nick)+'/'+ns(MN)).set({status:'friend',ts:Date.now()});
-  renderFList(fTab);renderSidebarDMs();renderPendingBadge();
+  // Don't call render functions - listener will handle it
 }
 async function declineFriend(nick){
   await db.ref('friends/'+ns(MN)+'/'+ns(nick)).remove();
   await db.ref('friends/'+ns(nick)+'/'+ns(MN)).remove();
-  renderFList(fTab);renderPendingBadge();
+  // Don't call render functions - listener will handle it
 }
 async function removeFriend(nick){
   await db.ref('friends/'+ns(MN)+'/'+ns(nick)).remove();
   await db.ref('friends/'+ns(nick)+'/'+ns(MN)).remove();
-  renderFList(fTab);renderSidebarDMs();
+  // Don't call render functions - listener will handle it
 }
 async function renderPendingBadge(){
   const s=await db.ref('friends/'+ns(MN)).get();
@@ -815,21 +1024,36 @@ async function renderFList(tab){
 }
 async function renderSidebarDMs(){
   const c=$('sbDMs');if(!c)return;
-  // Clear existing items to prevent duplicates
-  c.innerHTML='';
   const s=await db.ref('friends/'+ns(MN)).get();
-  if(!s.exists())return;
-  const friends=new Set();
+  if(!s.exists()){c.innerHTML='';return;}
+  
+  // Get current friends
+  const currentFriends=new Set();
   s.forEach(ch=>{
-    if(ch.val().status==='friend')friends.add(ch.key);
+    if(ch.val().status==='friend')currentFriends.add(ch.key);
   });
-  // Render each friend once
-  friends.forEach(nick=>{
-    const div=document.createElement('div');div.className='sbi';div.dataset.nick=nick;
-    div.onclick=()=>showV('dm',nick);
-    if(CV==='dm'&&CDN===nick)div.classList.add('on');
-    div.innerHTML=`<div class="sbic dm">${nick.slice(0,2).toUpperCase()}</div><span class="sbn">@${esc(nick)}</span><div class="sbdot off" id="dot_${ns(nick)}"></div>`;
-    c.appendChild(div);
+  
+  // Remove items that are no longer friends
+  Array.from(c.children).forEach(child=>{
+    const nick=child.dataset.nick;
+    if(!currentFriends.has(nick))child.remove();
+  });
+  
+  // Add or update friends
+  currentFriends.forEach(nick=>{
+    let div=c.querySelector(`[data-nick="${nick}"]`);
+    if(!div){
+      // Create new item
+      div=document.createElement('div');
+      div.className='sbi';
+      div.dataset.nick=nick;
+      div.onclick=()=>showV('dm',nick);
+      div.innerHTML=`<div class="sbic dm">${nick.slice(0,2).toUpperCase()}</div><span class="sbn">@${esc(nick)}</span><div class="sbdot off" id="dot_${ns(nick)}"></div>`;
+      c.appendChild(div);
+    }
+    // Update active state
+    div.classList.toggle('on',CV==='dm'&&CDN===nick);
+    // Update online status
     isOn(nick).then(on=>{const d=$('dot_'+ns(nick));if(d)d.className='sbdot '+(on?'':'off');});
   });
 }
@@ -865,6 +1089,130 @@ function openDM(nick){
     });
   });
 }
+
+// ── EMOJI & GIF PICKER ─────────────────────────────────────
+const EMOJIS=['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔','❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️','💣','💬','👁️','🗨️','🗯️','💭','💤','👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄'];
+const TENOR_API_KEY='AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ'; // Public Tenor API key
+let currentEmojiTarget='';
+let gifCache={};
+let currentGifSearch='';
+
+function toggleEmojiPicker(target){
+  currentEmojiTarget=target;
+  const picker=$(target==='dm'?'emojiPickerDM':'emojiPickerChat');
+  const isHidden=picker.classList.contains('hidden');
+  // Close all pickers first
+  document.querySelectorAll('.emoji-picker').forEach(p=>p.classList.add('hidden'));
+  document.querySelectorAll('.gif-picker').forEach(p=>p.classList.add('hidden'));
+  if(isHidden){
+    // Populate if empty
+    if(picker.children.length===0){
+      EMOJIS.forEach(emoji=>{
+        const btn=document.createElement('button');
+        btn.textContent=emoji;
+        btn.onclick=()=>insertEmoji(emoji);
+        picker.appendChild(btn);
+      });
+    }
+    picker.classList.remove('hidden');
+  }
+}
+
+function toggleGifPicker(target){
+  currentEmojiTarget=target;
+  const picker=$(target==='dm'?'gifPickerDM':'gifPickerChat');
+  const isHidden=picker.classList.contains('hidden');
+  // Close all pickers first
+  document.querySelectorAll('.emoji-picker').forEach(p=>p.classList.add('hidden'));
+  document.querySelectorAll('.gif-picker').forEach(p=>p.classList.add('hidden'));
+  if(isHidden){
+    if(picker.children.length===0){
+      renderGifPicker(picker);
+    }
+    picker.classList.remove('hidden');
+  }
+}
+
+function renderGifPicker(picker){
+  picker.innerHTML=`
+    <div class="gif-search">
+      <input type="text" class="gif-search-input" placeholder="Поиск GIF..." id="gifSearch${currentEmojiTarget}"/>
+      <button class="gif-search-btn" onclick="searchGifs()">🔍</button>
+    </div>
+    <div class="gif-grid" id="gifGrid${currentEmojiTarget}"></div>
+  `;
+  loadTrendingGifs();
+}
+
+async function loadTrendingGifs(){
+  const grid=$('gifGrid'+currentEmojiTarget);
+  if(!grid)return;
+  grid.innerHTML='<div class="gif-loading">Загрузка...</div>';
+  try{
+    const res=await fetch(`https://tenor.googleapis.com/v2/featured?key=${TENOR_API_KEY}&limit=20&media_filter=gif`);
+    const data=await res.json();
+    displayGifs(data.results);
+  }catch(e){
+    grid.innerHTML='<div class="gif-error">Ошибка загрузки GIF</div>';
+  }
+}
+
+async function searchGifs(){
+  const input=$('gifSearch'+currentEmojiTarget);
+  const query=input.value.trim();
+  if(!query)return loadTrendingGifs();
+  const grid=$('gifGrid'+currentEmojiTarget);
+  grid.innerHTML='<div class="gif-loading">Поиск...</div>';
+  try{
+    const res=await fetch(`https://tenor.googleapis.com/v2/search?key=${TENOR_API_KEY}&q=${encodeURIComponent(query)}&limit=20&media_filter=gif`);
+    const data=await res.json();
+    displayGifs(data.results);
+  }catch(e){
+    grid.innerHTML='<div class="gif-error">Ошибка поиска</div>';
+  }
+}
+
+function displayGifs(gifs){
+  const grid=$('gifGrid'+currentEmojiTarget);
+  if(!gifs||gifs.length===0){
+    grid.innerHTML='<div class="gif-error">GIF не найдены</div>';
+    return;
+  }
+  grid.innerHTML='';
+  gifs.forEach(gif=>{
+    const url=gif.media_formats.tinygif.url;
+    const img=document.createElement('img');
+    img.src=url;
+    img.className='gif-item';
+    img.onclick=()=>insertGif(url);
+    grid.appendChild(img);
+  });
+}
+
+function insertEmoji(emoji){
+  const inp=$(currentEmojiTarget==='dm'?'dmIn':'chatIn');
+  inp.value+=emoji;
+  inp.focus();
+  // Close picker
+  document.querySelectorAll('.emoji-picker').forEach(p=>p.classList.add('hidden'));
+}
+
+function insertGif(url){
+  const inp=$(currentEmojiTarget==='dm'?'dmIn':'chatIn');
+  inp.value+='[GIF:'+url+']';
+  inp.focus();
+  // Close picker
+  document.querySelectorAll('.gif-picker').forEach(p=>p.classList.add('hidden'));
+}
+
+// Close emoji/gif picker when clicking outside
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.emoji-btn')&&!e.target.closest('.emoji-picker')&&!e.target.closest('.gif-btn')&&!e.target.closest('.gif-picker')){
+    document.querySelectorAll('.emoji-picker').forEach(p=>p.classList.add('hidden'));
+    document.querySelectorAll('.gif-picker').forEach(p=>p.classList.add('hidden'));
+  }
+});
+
 async function sendDM(){
   const inp=$('dmIn');const text=inp.value.trim();
   if(!text||!CDN)return;
@@ -883,13 +1231,20 @@ async function sendDM(){
 function appendDMMsg(nick,text,side){
   const msgs=$('dmMsgs');
   const div=document.createElement('div');div.className='msg';
+  // Check if text contains GIF
+  let content=esc(text);
+  const gifMatch=text.match(/\[GIF:(https?:\/\/[^\]]+)\]/);
+  if(gifMatch){
+    const gifUrl=gifMatch[1];
+    content=text.replace(/\[GIF:[^\]]+\]/g,`<img src="${gifUrl}" class="msg-gif" alt="GIF"/>`);
+  }
   div.innerHTML=`<div class="msg-av ${side}">${nick.slice(0,2).toUpperCase()}</div>`
-    +`<div class="msg-body"><div class="msg-nick ${side}">@${esc(nick)}</div><div class="msg-txt">${esc(text)}</div></div>`;
+    +`<div class="msg-body"><div class="msg-nick ${side}">@${esc(nick)}</div><div class="msg-txt">${content}</div></div>`;
   msgs.appendChild(div);msgs.scrollTop=99999;
 }
 
 // ── SETTINGS ───────────────────────────────────────────────
-function renderSettings(){
+async function renderSettings(){
   const body=$('setBody');if(!body)return;
   const nr=getSetting('noiseReduce',true);
   const ec=getSetting('echoCancellation',true);
@@ -897,14 +1252,40 @@ function renderSettings(){
   const pushToTalk=getSetting('pushToTalk',false);
   const accentColor=getSetting('accentColor','#7c6af7');
   const COLORS=['#7c6af7','#4fc8a8','#f76a8a','#f7c26a','#4fb3f7','#c46af7','#f7a64f'];
+  
+  // Get audio devices
+  let audioInputs=[],audioOutputs=[];
+  try{
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    audioInputs=devices.filter(d=>d.kind==='audioinput');
+    audioOutputs=devices.filter(d=>d.kind==='audiooutput');
+  }catch(e){}
+  
+  const selectedInput=getSetting('audioInput','default');
+  const selectedOutput=getSetting('audioOutput','default');
 
   body.innerHTML=`
   <div class="set-sec">
     <div class="set-sec-lbl">Микрофон</div>
+    <div class="set-row"><div><div class="set-rl">Устройство ввода</div><div class="set-rs">Выбор микрофона</div></div>
+      <select class="set-select" id="s_input">
+        <option value="default">По умолчанию</option>
+        ${audioInputs.map(d=>`<option value="${d.deviceId}" ${selectedInput===d.deviceId?'selected':''}>${d.label||'Микрофон '+d.deviceId.slice(0,8)}</option>`).join('')}
+      </select>
+    </div>
     <div class="set-row"><div><div class="set-rl">Шумоподавление</div><div class="set-rs">Фильтрация фоновых шумов</div></div><label class="toggle"><input type="checkbox" id="s_nr" ${nr?'checked':''}><span class="toggle-sl"></span></label></div>
     <div class="set-row"><div><div class="set-rl">Эхоподавление</div><div class="set-rs">Убирает эхо от динамиков</div></div><label class="toggle"><input type="checkbox" id="s_ec" ${ec?'checked':''}><span class="toggle-sl"></span></label></div>
     <div class="set-row"><div><div class="set-rl">Автогромкость</div><div class="set-rs">Автоматически выравнивает уровень</div></div><label class="toggle"><input type="checkbox" id="s_ag" ${ag?'checked':''}><span class="toggle-sl"></span></label></div>
     <div class="set-row"><div><div class="set-rl">Push to Talk</div><div class="set-rs">Удерживай Пробел для говора</div></div><label class="toggle"><input type="checkbox" id="s_pt" ${pushToTalk?'checked':''}><span class="toggle-sl"></span></label></div>
+  </div>
+  <div class="set-sec">
+    <div class="set-sec-lbl">Динамики</div>
+    <div class="set-row"><div><div class="set-rl">Устройство вывода</div><div class="set-rs">Выбор динамиков</div></div>
+      <select class="set-select" id="s_output">
+        <option value="default">По умолчанию</option>
+        ${audioOutputs.map(d=>`<option value="${d.deviceId}" ${selectedOutput===d.deviceId?'selected':''}>${d.label||'Динамики '+d.deviceId.slice(0,8)}</option>`).join('')}
+      </select>
+    </div>
   </div>
   <div class="set-sec">
     <div class="set-sec-lbl">Внешний вид</div>
@@ -916,16 +1297,23 @@ function renderSettings(){
     <div class="set-sec-lbl">Аккаунт</div>
     <div class="set-row"><div><div class="set-rl">Смена пароля</div></div>
       <div style="display:flex;gap:8px;align-items:center">
-        <input class="set-input" id="newPassIn" type="password" placeholder="новый пароль"/>
+        <div style="position:relative;flex:1">
+          <input class="set-input" id="newPassIn" type="password" placeholder="новый пароль" style="padding-right:35px"/>
+          <button class="pass-eye-set" onclick="togglePassVis('newPassIn')" type="button" title="Показать пароль">👁️</button>
+        </div>
         <button class="set-btn" onclick="changePass()">Сохранить</button>
       </div>
     </div>
     <div class="set-row"><div><div class="set-rl">Удалить аккаунт</div><div class="set-rs">Безвозвратно</div></div><button class="set-btn danger" onclick="deleteMyAccount()">Удалить</button></div>
   </div>
   <div class="set-sec">
+    <div class="set-sec-lbl">Сеть</div>
+    <div class="set-row"><div><div class="set-rl">PeerJS сервер</div><div class="set-rs">Сервер ${currentServerIndex+1} из ${PEERJS_SERVERS.length}</div></div><button class="set-btn" onclick="switchPeerServer()">Переключить</button></div>
+  </div>
+  <div class="set-sec">
     <div class="set-sec-lbl">О приложении</div>
-    <div class="set-row"><div class="set-rl">Версия</div><div style="font-family:Space Mono,monospace;font-size:12px;color:var(--mu)">void v2.1</div></div>
-    <div class="set-row"><div class="set-rl">Пользователь</div><div style="font-family:Space Mono,monospace;font-size:12px;color:var(--ac)">@${esc(MN)}</div></div>
+    <div class="set-row"><div class="set-rl">Версия</div><div style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--mu)">void v${APP_VERSION}</div></div>
+    <div class="set-row"><div class="set-rl">Пользователь</div><div style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--ac)">@${esc(MN)}</div></div>
   </div>`;
 
   // Bind toggles
@@ -933,6 +1321,10 @@ function renderSettings(){
   bindings.forEach(([id,key])=>{
     $(id).onchange=e=>setSetting(key,e.target.checked);
   });
+  
+  // Bind device selectors
+  $('s_input').onchange=e=>{setSetting('audioInput',e.target.value);showToast('🎤 Устройство ввода изменено','info');};
+  $('s_output').onchange=e=>{setSetting('audioOutput',e.target.value);showToast('🔊 Устройство вывода изменено','info');};
 }
 function setAccentColor(c){
   setSetting('accentColor',c);
@@ -958,7 +1350,7 @@ function listenAdmin(){
   admListener=db.ref('users').on('value',()=>{if(CV==='admin')renderAdmin();});
 }
 async function renderAdmin(){
-  const panel=$('adm-panel');if(!panel||MN!==ADMIN)return;
+  const panel=$('adm-panel');if(!panel||(MY_ROLE!=='admin'&&MY_ROLE!=='moder'))return;
   panel.innerHTML='<div style="padding:14px;font-family:Space Mono,monospace;font-size:11px;color:var(--mu)">загружаем...</div>';
   const us=await db.ref('users').get();
   if(!us.exists()){panel.innerHTML='<div style="padding:14px;color:var(--mu)">нет пользователей</div>';return;}
@@ -997,13 +1389,21 @@ async function renderAdmin(){
     h+=`</div>`;
     if(!ia){
       h+=`<div style="display:flex;gap:5px;flex-wrap:wrap">`;
-      h+=`<button onclick="admBan('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid ${bn?'rgba(79,200,168,.3)':'rgba(247,106,138,.3)'};background:${bn?'rgba(79,200,168,.08)':'rgba(247,106,138,.08)'};color:${bn?'var(--a2)':'var(--a3)'}">${bn?'Разбан':'Бан'}</button>`;
-      h+=`<button onclick="admMute('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,194,106,.3);background:rgba(247,194,106,.08);color:#f7c26a">${mt?'Размьют':'Мьют'}</button>`;
-      h+=`<button onclick="admKickRoom('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(124,106,247,.3);background:rgba(124,106,247,.08);color:var(--ac)">Кик</button>`;
-      h+=`<button onclick="admCrash('${nick}')" title="Краш клиента" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,106,138,.2);background:transparent;color:var(--mu)">💥</button>`;
-      h+=`<button onclick="admSpam('${nick}')" title="Флуд уведомлениями" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,106,138,.2);background:transparent;color:var(--mu)">📢</button>`;
-      h+=`<button onclick="admRename('${nick}')" title="Принудительный ник" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,106,138,.2);background:transparent;color:var(--mu)">✏️</button>`;
-      h+=`<button onclick="admDel('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid var(--b);background:transparent;color:var(--mu)">Удалить</button>`;
+      // Moder can only mute
+      if(MY_ROLE==='moder'){
+        h+=`<button onclick="admMute('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,194,106,.3);background:rgba(247,194,106,.08);color:#f7c26a">${mt?'Размьют':'Мьют'}</button>`;
+      }
+      // Admin has all powers
+      if(MY_ROLE==='admin'){
+        h+=`<button onclick="admBan('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid ${bn?'rgba(79,200,168,.3)':'rgba(247,106,138,.3)'};background:${bn?'rgba(79,200,168,.08)':'rgba(247,106,138,.08)'};color:${bn?'var(--a2)':'var(--a3)'}">${bn?'Разбан':'Бан'}</button>`;
+        h+=`<button onclick="admMute('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,194,106,.3);background:rgba(247,194,106,.08);color:#f7c26a">${mt?'Размьют':'Мьют'}</button>`;
+        h+=`<button onclick="admKickRoom('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(124,106,247,.3);background:rgba(124,106,247,.08);color:var(--ac)">Кик</button>`;
+        h+=`<button onclick="admCrash('${nick}')" title="Краш клиента" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,106,138,.2);background:transparent;color:var(--mu)">💥</button>`;
+        h+=`<button onclick="admCrash('${nick}')" title="Краш клиента" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,106,138,.2);background:transparent;color:var(--mu)">💥</button>`;
+        h+=`<button onclick="admSpam('${nick}')" title="Флуд уведомлениями" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,106,138,.2);background:transparent;color:var(--mu)">📢</button>`;
+        h+=`<button onclick="admRename('${nick}')" title="Принудительный ник" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid rgba(247,106,138,.2);background:transparent;color:var(--mu)">✏️</button>`;
+        h+=`<button onclick="admDel('${nick}')" style="padding:4px 9px;border-radius:6px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;border:1px solid var(--b);background:transparent;color:var(--mu)">Удалить</button>`;
+      }
       h+=`</div>`;
     }
     h+=`</div>`;
@@ -1012,16 +1412,24 @@ async function renderAdmin(){
   h+=`<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--b)">`;
   h+=`<div style="font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Глобальные действия</div>`;
   h+=`<div style="display:flex;gap:8px;flex-wrap:wrap">`;
-  h+=`<button onclick="admBroadcast()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(124,106,247,.3);background:rgba(124,106,247,.08);color:var(--ac);font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">📣 Broadcast</button>`;
-  h+=`<button onclick="admKickAll()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(247,106,138,.3);background:rgba(247,106,138,.08);color:var(--a3);font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">⛔ Кикнуть всех</button>`;
-  h+=`<button onclick="admMuteAll()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(247,194,106,.3);background:rgba(247,194,106,.08);color:#f7c26a;font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">🔇 Мьют всех</button>`;
-  h+=`<button onclick="admClearAll()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(247,106,138,.25);background:rgba(247,106,138,.06);color:var(--a3);font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">🗑 Удалить все аккаунты</button>`;
+  // Moder can only mute all
+  if(MY_ROLE==='moder'){
+    h+=`<button onclick="admMuteAll()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(247,194,106,.3);background:rgba(247,194,106,.08);color:#f7c26a;font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">🔇 Мьют всех</button>`;
+  }
+  // Admin has all global powers
+  if(MY_ROLE==='admin'){
+    h+=`<button onclick="admBroadcast()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(124,106,247,.3);background:rgba(124,106,247,.08);color:var(--ac);font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">📣 Broadcast</button>`;
+    h+=`<button onclick="admKickAll()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(247,106,138,.3);background:rgba(247,106,138,.08);color:var(--a3);font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">⛔ Кикнуть всех</button>`;
+    h+=`<button onclick="admMuteAll()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(247,194,106,.3);background:rgba(247,194,106,.08);color:#f7c26a;font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">🔇 Мьют всех</button>`;
+    h+=`<button onclick="admClearAll()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(247,106,138,.25);background:rgba(247,106,138,.06);color:var(--a3);font-family:Syne,sans-serif;font-weight:600;font-size:12px;cursor:pointer">🗑 Удалить все аккаунты</button>`;
+  }
   h+=`</div></div>`;
   panel.innerHTML=h;
 }
 function aStat(l,v,c){return `<div style="background:var(--s2);border:1px solid var(--b);border-radius:12px;padding:13px 14px"><div style="font-family:Space Mono,monospace;font-size:10px;color:var(--mu);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px">${l}</div><div style="font-size:24px;font-weight:800;color:${c}">${v}</div></div>`;}
 
 async function admBan(nick){
+  if(MY_ROLE!=='admin')return; // Only admin can ban
   if(nick===ADMIN)return;
   const s=await db.ref('users/'+ns(nick)+'/banned').get();
   const newState=!s.val();
@@ -1033,6 +1441,7 @@ async function admBan(nick){
   renderAdmin();
 }
 async function admMute(nick,mins=10){
+  if(MY_ROLE!=='admin'&&MY_ROLE!=='moder')return; // Admin and moder can mute
   if(nick===ADMIN)return;
   const s=await db.ref('users/'+ns(nick)+'/muted_until').get();
   const now=Date.now();
@@ -1048,28 +1457,33 @@ async function admMute(nick,mins=10){
   renderAdmin();
 }
 async function admKickRoom(nick){
+  if(MY_ROLE!=='admin')return; // Only admin
   await db.ref('notifications/'+ns(nick)).push({type:'kick_room',from:ADMIN,ts:Date.now()});
   alert('Сигнал кика отправлен @'+nick);
 }
 async function admCrash(nick){
+  if(MY_ROLE!=='admin')return; // Only admin
   if(!confirm('Краш клиента @'+nick+'? (отправит петлю уведомлений)'))return;
   const batch=[];
   for(let i=0;i<50;i++)batch.push(db.ref('notifications/'+ns(nick)).push({type:'ping',i,ts:Date.now()}));
   await Promise.all(batch);
 }
 async function admSpam(nick){
+  if(MY_ROLE!=='admin')return; // Only admin
   const msg=prompt('Сообщение для флуда:','🔔 УВЕДОМЛЕНИЕ');
   if(!msg)return;
   for(let i=0;i<10;i++)await db.ref('notifications/'+ns(nick)).push({type:'spam',text:msg,i,ts:Date.now()});
 }
 async function admRename(nick){
+  if(MY_ROLE!=='admin')return; // Only admin
   const newNick=prompt('Новое отображаемое имя для @'+nick+':');
   if(!newNick||newNick.length<1)return;
   await db.ref('users/'+ns(nick)+'/displayName').set(newNick);
   await db.ref('notifications/'+ns(nick)).push({type:'rename',newName:newNick,ts:Date.now()});
 }
-async function admDel(nick){if(nick===ADMIN)return;if(!confirm('Удалить @'+nick+'?'))return;await db.ref('users/'+ns(nick)).remove();await db.ref('friends/'+ns(nick)).remove();renderAdmin();}
+async function admDel(nick){if(MY_ROLE!=='admin')return;if(nick===ADMIN)return;if(!confirm('Удалить @'+nick+'?'))return;await db.ref('users/'+ns(nick)).remove();await db.ref('friends/'+ns(nick)).remove();renderAdmin();}
 async function admBroadcast(){
+  if(MY_ROLE!=='admin')return; // Only admin
   const msg=prompt('Сообщение для всех пользователей:');
   if(!msg)return;
   const s=await db.ref('users').get();
@@ -1079,6 +1493,7 @@ async function admBroadcast(){
   alert('Сообщение отправлено '+batch.length+' пользователям');
 }
 async function admKickAll(){
+  if(MY_ROLE!=='admin')return; // Only admin
   if(!confirm('Кикнуть ВСЕХ из комнат?'))return;
   const s=await db.ref('users').get();
   const batch=[];
@@ -1086,6 +1501,7 @@ async function admKickAll(){
   await Promise.all(batch);
 }
 async function admMuteAll(){
+  if(MY_ROLE!=='admin'&&MY_ROLE!=='moder')return; // Admin and moder can mute all
   const m=parseInt(prompt('Мьют на сколько минут?','5')||'5');
   if(isNaN(m)||m<=0)return;
   const s=await db.ref('users').get();
@@ -1095,6 +1511,7 @@ async function admMuteAll(){
   renderAdmin();
 }
 async function admClearAll(){
+  if(MY_ROLE!=='admin')return; // Only admin
   if(!confirm('Удалить ВСЕ аккаунты кроме своего?'))return;
   const s=await db.ref('users').get();const u={};
   s.forEach(c=>{if(c.key!==ns(MN))u['users/'+c.key]=null;});
@@ -1157,7 +1574,17 @@ function showToast(msg,type='info'){
 // ── CALL TO FRIENDS ────────────────────────────────────────
 let callPeer=null,callStream=null,incomingCall=null,incomingCallData=null;
 
+let lastCallTime={};
 function callFriendByNick(nick){
+  // Prevent spam - 5 second cooldown per user
+  const now=Date.now();
+  const lastCall=lastCallTime[nick]||0;
+  if(now-lastCall<5000){
+    showToast('⏱ Подожди немного перед следующим звонком','warn');
+    return;
+  }
+  lastCallTime[nick]=now;
+  
   // Open a private voice room with that friend
   const roomName='call_'+[ns(MN),ns(nick)].sort().join('_');
   showToast('📞 Звоним @'+nick+'...','info');
@@ -1220,8 +1647,10 @@ async function joinRoom(){
   
   setIdleLog('— запрашиваем микрофон —');
   try{
+    const audioDevice=getSetting('audioInput','default');
     const constraints={
       audio:{
+        deviceId:audioDevice!=='default'?{exact:audioDevice}:undefined,
         echoCancellation:getSetting('echoCancellation',true),
         noiseSuppression:getSetting('noiseReduce',true),
         autoGainControl:getSetting('autoGain',true)
@@ -1300,7 +1729,6 @@ function setupDataConn(conn){
 function addPeerTile(pid,nick,isAdmin){
   if(!peers[pid])peers[pid]={};
   peers[pid].nick=nick;peers[pid].isAdmin=isAdmin;
-  $('waitTile').style.display='none';
   const cont=$('peersC');
   // Check if tile already exists to prevent duplicates
   let tile=$('pt_'+pid);
@@ -1330,7 +1758,6 @@ function removePeer(pid){
   if(tile)tile.remove();
   try{p.mediaConn?.close();p.dataConn?.close();p.mySSCall?.close();p.inSSCall?.close();}catch(e){}
   const nick=p.nick||pid;delete peers[pid];
-  if(Object.keys(peers).length===0)$('waitTile').style.display='flex';
   $('remoteAudio').srcObject=null;
   hideRemoteSS();sysMsg('@'+nick+' отключился');
 }
@@ -1365,7 +1792,29 @@ function setQ(q){ssQ=q;['qAu','q72','q10','qLo'].forEach((id,i)=>$(id).classList
 async function startSS(){
   closeSSModal();
   const w=ssQ==='1080'?1920:ssQ==='low'?854:1280,h=ssQ==='1080'?1080:ssQ==='low'?480:720;
-  try{screenStream=await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:w},height:{ideal:h},frameRate:{ideal:30},cursor:'always'},audio:false});}
+  try{
+    // For Electron, use desktopCapturer if available
+    if(window.electronAPI){
+      const sources=await window.electronAPI.getDesktopSources();
+      if(!sources||sources.length===0){sysMsg('⚠ нет доступных источников');return;}
+      const sourceId=sources[0].id;
+      screenStream=await navigator.mediaDevices.getUserMedia({
+        audio:false,
+        video:{
+          mandatory:{
+            chromeMediaSource:'desktop',
+            chromeMediaSourceId:sourceId,
+            minWidth:w,
+            maxWidth:w,
+            minHeight:h,
+            maxHeight:h
+          }
+        }
+      });
+    }else{
+      screenStream=await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:w},height:{ideal:h},frameRate:{ideal:30},cursor:'always'},audio:false});
+    }
+  }
   catch(e){sysMsg('⚠ демонстрация отменена');return;}
   $('mySSv').srcObject=screenStream;$('mySSv').play().catch(()=>{});
   $('mySS').classList.add('on');$('ssEmpty').style.display='none';$('ssBtn').classList.add('act');
@@ -1386,7 +1835,11 @@ function stopSS(silent){
 function enterCallUI(){
   showV('voice');
   $('vcRoom').textContent=room;$('vcRoomLbl').textContent=room;
-  $('invUrl').value=location.href.split('#')[0]+'#'+encodeURIComponent(room);
+  // Используем правильный URL для GitHub Pages
+  const baseUrl = location.hostname === 'localhost' || location.hostname === '127.0.0.1' 
+    ? location.href.split('#')[0] 
+    : 'https://whiteblacknew.github.io/dis-russia/';
+  $('invUrl').value=baseUrl+'#'+encodeURIComponent(room);
   $('sbRooms').innerHTML=`<div class="sbi on" onclick="showV('voice')"><div class="sbic room"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1C5.5 1 2 3 2 5.8a3.5 3.5 0 007 0C9 3 5.5 1 5.5 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="5.8" r="1" fill="currentColor"/></svg></div><span class="sbn">#${esc(room)}</span><div class="sbdot"></div></div>`;
 }
 function updateMicUI(){
@@ -1421,7 +1874,7 @@ function hangup(){
   if(myPeer){myPeer.destroy();myPeer=null;}
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
   isMuted=false;isHost=false;room='';
-  $('peersC').innerHTML='';$('waitTile').style.display='flex';
+  $('peersC').innerHTML='';
   $('chatMsgs').innerHTML='';$('remoteAudio').srcObject=null;
   hideRemoteSS();updateMicUI();
   $('sbRooms').innerHTML=`<div class="sbi" onclick="showV('idle')"><div class="sbic room"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1C6 1 2 3.5 2 6.5a4 4 0 008 0C10 3.5 6 1 6 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6.5" r="1.2" fill="currentColor"/></svg></div><span class="sbn">Войти в канал</span></div>`;
@@ -1449,8 +1902,15 @@ async function sendChat(){
 function addMsg(nick,text,side){
   const box=$('chatMsgs');
   const el=document.createElement('div');el.className='msg';
-  if(side==='sys'){el.innerHTML=`<div class="msg-av sys">—</div><div class="msg-body"><div class="msg-txt sys">${esc(text)}</div></div>`;}
-  else{el.innerHTML=`<div class="msg-av ${side}">${(nick||'?').slice(0,2).toUpperCase()}</div><div class="msg-body"><div class="msg-nick ${side}">@${esc(nick)}</div><div class="msg-txt">${esc(text)}</div></div>`;}
+  // Check if text contains GIF
+  let content=esc(text);
+  const gifMatch=text.match(/\[GIF:(https?:\/\/[^\]]+)\]/);
+  if(gifMatch){
+    const gifUrl=gifMatch[1];
+    content=text.replace(/\[GIF:[^\]]+\]/g,`<img src="${gifUrl}" class="msg-gif" alt="GIF"/>`);
+  }
+  if(side==='sys'){el.innerHTML=`<div class="msg-av sys">—</div><div class="msg-body"><div class="msg-txt sys">${content}</div></div>`;}
+  else{el.innerHTML=`<div class="msg-av ${side}">${(nick||'?').slice(0,2).toUpperCase()}</div><div class="msg-body"><div class="msg-nick ${side}">@${esc(nick)}</div><div class="msg-txt">${content}</div></div>`;}
   box.appendChild(el);box.scrollTop=box.scrollHeight;
 }
 function sysMsg(t){addMsg(null,t,'sys');}
@@ -1468,6 +1928,26 @@ window.addEventListener('keyup',e=>{
   }
 });
 
+// ── WINDOW CONTROLS (for Electron) ────────────────────────
+function minimizeWindow(){
+  if(window.electron)window.electron.send('window-minimize');
+}
+function maximizeWindow(){
+  if(window.electron)window.electron.send('window-maximize');
+}
+function closeWindow(){
+  if(window.electron)window.electron.send('window-close');
+  else window.close();
+}
+
+// Hide titlebar if not in Electron
+if(!window.electron){
+  const tb=document.getElementById('titlebar');
+  if(tb)tb.style.display='none';
+  document.getElementById('APP').style.paddingTop='0';
+  document.getElementById('AUTH').style.paddingTop='0';
+}
+
 // ── STARTUP ────────────────────────────────────────────────
 window.addEventListener('load',()=>{
   // Apply saved accent color
@@ -1483,6 +1963,9 @@ window.addEventListener('load',()=>{
   }
   const hash=decodeURIComponent(location.hash.slice(1));
   if(hash)$('roomIn').value=hash;
+  
+  // Auto-update check
+  checkForUpdates();
 
   $('roomIn').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
   $('chatIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
@@ -1491,6 +1974,39 @@ window.addEventListener('load',()=>{
   $('lPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   $('rPass2').addEventListener('keydown',e=>{if(e.key==='Enter')doReg();});
 });
+
+// ── AUTO-UPDATE ────────────────────────────────────────────
+const APP_VERSION='2.2.0';
+async function checkForUpdates(){
+  try{
+    const snap=await db.ref('app_version').get();
+    if(snap.exists()){
+      const latestVersion=snap.val().version;
+      const updateUrl=snap.val().url||'https://whiteblacknew.github.io/dis-russia/';
+      if(latestVersion&&latestVersion!==APP_VERSION){
+        showUpdateNotification(latestVersion,updateUrl);
+      }
+    }
+  }catch(e){
+    console.log('Update check failed:',e);
+  }
+}
+function showUpdateNotification(version,url){
+  const div=document.createElement('div');
+  div.className='update-banner';
+  div.innerHTML=`
+    <div class="update-content">
+      <div class="update-icon">🎉</div>
+      <div class="update-text">
+        <div class="update-title">Доступна новая версия ${version}</div>
+        <div class="update-sub">Обновись для новых функций и исправлений</div>
+      </div>
+      <button class="update-btn" onclick="window.open('${url}','_blank')">Обновить</button>
+      <button class="update-close" onclick="this.parentElement.parentElement.remove()">✕</button>
+    </div>
+  `;
+  document.body.appendChild(div);
+}
 </script>
 </body>
 </html>
