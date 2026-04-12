@@ -79,7 +79,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .sb-user{margin-top:auto;padding:10px 12px;border-top:1px solid var(--b);display:flex;align-items:center;gap:10px}
 
 /* ── UPDATE BADGE ── */
-.update-badge{position:absolute;top:-8px;right:0;background:var(--a2);color:#000;font-family:'Space Mono',monospace;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;animation:pulse 2s ease-in-out infinite;cursor:pointer;white-space:nowrap}
+.update-badge{position:absolute;top:-8px;right:0;background:var(--a2);color:#000;font-family:'Space Mono',monospace;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;animation:pulse 2s ease-in-out infinite;cursor:pointer;white-space:nowrap;filter:none;-webkit-filter:none}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 .sb-user{position:relative}
 .sb-uav{width:30px;height:30px;border-radius:50%;background:rgba(124,106,247,.18);border:1px solid rgba(124,106,247,.3);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--ac);flex-shrink:0}
@@ -244,6 +244,15 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .dm-hs{font-family:'Space Mono',monospace;font-size:11px;color:var(--mu)}
 .dm-call-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;border:1px solid rgba(79,200,168,.3);background:rgba(79,200,168,.08);cursor:pointer;transition:all .15s;color:var(--a2)}
 .dm-call-btn:hover{background:rgba(79,200,168,.18)}
+.dm-call-ui{padding:14px 18px;border-bottom:1px solid var(--b);background:rgba(79,200,168,.05);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dm-call-ui.hidden{display:none}
+.dm-call-status{font-family:'Space Mono',monospace;font-size:12px;color:var(--a2);font-weight:600}
+.dm-call-controls{display:flex;gap:8px}
+.dm-call-ctrl{width:36px;height:36px;border-radius:50%;border:1px solid var(--b);background:var(--s2);color:var(--tx);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.dm-call-ctrl:hover{background:var(--s3);border-color:var(--bb)}
+.dm-call-ctrl.mut{background:rgba(247,106,138,.12);border-color:rgba(247,106,138,.3);color:var(--a3)}
+.dm-call-ctrl.hangup{background:rgba(247,106,138,.12);border-color:rgba(247,106,138,.3);color:var(--a3)}
+.dm-call-ctrl.hangup:hover{background:rgba(247,106,138,.22)}
 .dm-msgs{flex:1;overflow-y:auto;padding:13px 18px;display:flex;flex-direction:column;gap:7px}
 .dm-msgs::-webkit-scrollbar{width:4px}
 .dm-msgs::-webkit-scrollbar-thumb{background:var(--m2);border-radius:2px}
@@ -367,6 +376,30 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;background:ra
 .ss-opt-ic{color:var(--ac);opacity:.85}
 .ss-opt-nm{font-family:'Space Mono',monospace;font-size:10px;color:var(--tx)}
 .ss-opt-sb{font-family:'Space Mono',monospace;font-size:9px;color:var(--mu)}
+.source-tabs{display:flex;gap:8px;margin-top:8px}
+.source-tab{flex:1;padding:12px;border-radius:10px;border:2px solid var(--b);background:var(--s2);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Space Mono',monospace;font-size:11px;font-weight:600;color:var(--mu)}
+.source-tab:hover{border-color:rgba(124,106,247,.3);color:var(--tx)}
+.source-tab.sel{border-color:var(--ac);background:rgba(124,106,247,.1);color:var(--ac)}
+.source-tab svg{opacity:.7}
+.source-tab.sel svg{opacity:1}
+.source-item{display:flex;align-items:center;gap:12px;padding:10px;border:2px solid var(--b);border-radius:10px;background:var(--s2);cursor:pointer;transition:all .15s;margin-bottom:8px}
+.source-item:hover{border-color:rgba(124,106,247,.3);background:rgba(124,106,247,.05)}
+.source-item.selected{border-color:var(--ac);background:rgba(124,106,247,.12)}
+.source-thumb{width:100px;height:75px;border-radius:6px;background:var(--s3);object-fit:cover;flex-shrink:0}
+.source-info{flex:1;min-width:0}
+.source-name{font-weight:600;font-size:13px;color:var(--tx);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.source-type{font-family:'Space Mono',monospace;font-size:10px;color:var(--mu);text-transform:uppercase}
+.quality-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.quality-opt{padding:10px;border-radius:8px;border:1px solid var(--b);background:var(--s2);cursor:pointer;text-align:center;transition:all .15s}
+.quality-opt:hover{border-color:var(--bb);background:var(--s3)}
+.quality-opt.sel{border-color:rgba(79,200,168,.4);background:rgba(79,200,168,.08)}
+.quality-name{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--tx);margin-bottom:2px}
+.quality-opt.sel .quality-name{color:var(--a2)}
+.quality-sub{font-family:'Space Mono',monospace;font-size:9px;color:var(--mu);opacity:.7}
+.fps-row{display:flex;gap:8px;margin-top:8px}
+.fps-opt{flex:1;padding:9px;border-radius:8px;border:1px solid var(--b);background:var(--s2);cursor:pointer;text-align:center;font-family:'Space Mono',monospace;font-size:11px;font-weight:600;color:var(--mu);transition:all .15s}
+.fps-opt:hover{border-color:var(--bb);background:var(--s3);color:var(--tx)}
+.fps-opt.sel{border-color:rgba(79,200,168,.4);background:rgba(79,200,168,.08);color:var(--a2)}
 .q-row{display:flex;gap:7px;margin-top:7px}
 .q-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--b);background:var(--s2);cursor:pointer;text-align:center;font-family:'Space Mono',monospace;font-size:11px;color:var(--mu);transition:all .15s}
 .q-btn:hover{border-color:var(--bb);color:var(--tx)}
@@ -678,6 +711,20 @@ audio{display:none}
           <div style="flex:1;min-width:0"><div class="dm-hn" id="dmNm">—</div><div class="dm-hs" id="dmSt">—</div></div>
           <button class="dm-call-btn" id="dmCallBtn" onclick="callFriend()" title="Позвонить"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5.5C2 4.1 2.7 3 3.6 2.3c.7-.6 1.4-.8 2.4-.8.5 0 1 .4 1.1 1L7.7 4c.2.6-.1 1.3-.7 1.5-.3.1-.4.4-.3.7C7 7 8 8 8.8 8.3c.3.1.6 0 .7-.3.2-.6.9-.9 1.5-.7l1.5.6c.6.1 1 .6 1 1.1 0 1-.2 1.7-.8 2.4-.7.9-1.8 1.6-3.2 1.6C5.4 13 2 9.3 2 5.5z" fill="var(--a2)" opacity=".9"/></svg></button>
         </div>
+        
+        <!-- DM CALL UI -->
+        <div class="dm-call-ui hidden" id="dmCallUI">
+          <div class="dm-call-status" id="dmCallStatus">Звоним...</div>
+          <div class="dm-call-controls">
+            <button class="dm-call-ctrl" id="dmMicBtn" onclick="toggleDMMic()" title="Микрофон">
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><rect x="5.5" y="1.5" width="6" height="8.5" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 8.5a6 6 0 0012 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8.5 14.5v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+            <button class="dm-call-ctrl hangup" onclick="hangupDMCall()" title="Завершить">
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M2 5.5C2 4.1 2.7 3 3.6 2.3c.7-.6 1.4-.8 2.4-.8.5 0 1 .4 1.1 1L7.7 4c.2.6-.1 1.3-.7 1.5-.3.1-.4.4-.3.7C7 7 8 8 8.8 8.3c.3.1.6 0 .7-.3.2-.6.9-.9 1.5-.7l1.5.6c.6.1 1 .6 1 1.1 0 1-.2 1.7-.8 2.4-.7.9-1.8 1.6-3.2 1.6C5.4 13 2 9.3 2 5.5z" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </div>
+        
         <div class="dm-msgs" id="dmMsgs"></div>
         <div class="dm-ir">
           <button class="emoji-btn" onclick="toggleEmojiPicker('dm')" title="Эмодзи">😊</button>
@@ -719,6 +766,34 @@ audio{display:none}
   </div>
 </div>
 
+<!-- UPDATE MODAL -->
+<div class="modal-ov hidden" id="updateModal">
+  <div class="modal" style="width:420px">
+    <div class="modal-h">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v6M9 8l3-3M9 8L6 5" stroke="var(--a2)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10v4a2 2 0 002 2h8a2 2 0 002-2v-4" stroke="var(--a2)" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span class="modal-ht">Доступно обновление</span>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center;padding:12px 0">
+        <div style="font-size:32px;margin-bottom:8px">🎉</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">Версия <span id="updateVersionText">—</span></div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--mu)">Новая версия готова к установке</div>
+      </div>
+      <div id="updateProgress" style="display:none;margin-top:16px">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--mu);margin-bottom:6px;text-align:center">Загрузка обновления...</div>
+        <div style="background:var(--s2);border-radius:8px;height:6px;overflow:hidden">
+          <div id="updateProgressBar" style="background:var(--a2);height:100%;width:0%;transition:width .3s"></div>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--mu);margin-top:6px;text-align:center" id="updateProgressText">0%</div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="modal-cancel" onclick="closeUpdateModal()" id="updateCancelBtn">Позже</button>
+      <button class="modal-ok" onclick="downloadAndInstallUpdate()" id="updateDownloadBtn">Скачать и установить</button>
+    </div>
+  </div>
+</div>
+
 <!-- SS MODAL -->
 <div class="modal-ov hidden" id="ssModal">
   <div class="modal">
@@ -739,6 +814,63 @@ audio{display:none}
       </div>
     </div>
     <div class="modal-f"><div class="modal-note">Браузер спросит разрешение</div><button class="modal-cancel" onclick="closeSSModal()">Отмена</button><button class="modal-ok" onclick="startSS()">Начать</button></div>
+  </div>
+</div>
+
+<!-- ELECTRON SOURCE PICKER -->
+<div class="modal-ov hidden" id="sourcePickerModal">
+  <div class="modal" style="width:680px">
+    <div class="modal-h"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1.5" y="2.5" width="15" height="10" rx="2" stroke="var(--ac)" stroke-width="1.4"/><path d="M5.5 12.5l-2 4M12.5 12.5l2 4M4 16.5h10" stroke="var(--ac)" stroke-width="1.4" stroke-linecap="round"/></svg><span class="modal-ht">Демонстрация экрана</span><button class="modal-x" onclick="closeSourcePicker()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 1l9 9M10 1L1 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button></div>
+    <div class="modal-body">
+      <!-- Source Type Filter -->
+      <div class="modal-slbl">Выбери источник</div>
+      <div class="source-tabs">
+        <div class="source-tab sel" id="srcTabScreen" onclick="filterSources('screen')">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="16" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M6 14l-1.5 3M14 14l1.5 3M5 17h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <span>Экраны</span>
+        </div>
+        <div class="source-tab" id="srcTabWindow" onclick="filterSources('window')">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="6" y="7" width="12" height="9" rx="1.5" fill="var(--s3)" stroke="currentColor" stroke-width="1.3"/></svg>
+          <span>Окна</span>
+        </div>
+      </div>
+      
+      <!-- Source List -->
+      <div id="sourcePickerList" style="max-height:280px;overflow-y:auto;margin-top:12px"></div>
+      
+      <!-- Quality Settings -->
+      <div class="modal-slbl" style="margin-top:16px">Качество</div>
+      <div class="quality-grid">
+        <div class="quality-opt" id="q480" onclick="setSSQuality('480')">
+          <div class="quality-name">480p</div>
+          <div class="quality-sub">30 FPS</div>
+        </div>
+        <div class="quality-opt sel" id="q720" onclick="setSSQuality('720')">
+          <div class="quality-name">720p</div>
+          <div class="quality-sub">30 FPS</div>
+        </div>
+        <div class="quality-opt" id="q1080" onclick="setSSQuality('1080')">
+          <div class="quality-name">1080p</div>
+          <div class="quality-sub">30 FPS</div>
+        </div>
+        <div class="quality-opt" id="qSource" onclick="setSSQuality('source')">
+          <div class="quality-name">Источник</div>
+          <div class="quality-sub">Оригинал</div>
+        </div>
+      </div>
+      
+      <!-- FPS Settings -->
+      <div class="modal-slbl" style="margin-top:12px">Частота кадров</div>
+      <div class="fps-row">
+        <div class="fps-opt" id="fps15" onclick="setSSFPS('15')">15 FPS</div>
+        <div class="fps-opt sel" id="fps30" onclick="setSSFPS('30')">30 FPS</div>
+        <div class="fps-opt" id="fps60" onclick="setSSFPS('60')">60 FPS</div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <div class="modal-note">Выбери источник для начала</div>
+      <button class="modal-cancel" onclick="closeSourcePicker()">Отмена</button>
+    </div>
   </div>
 </div>
 
@@ -1004,6 +1136,11 @@ async function initApp(){
   if(MY_ROLE==='admin'||MY_ROLE==='moder')listenAdmin();
   renderSidebarDMs();renderPendingBadge();
   showV('idle');
+  
+  // Initialize auto-updater for Electron
+  if(window.electronAPI && window.electronAPI.onUpdateAvailable){
+    initElectronUpdater();
+  }
 }
 
 // ── VIEWS ──────────────────────────────────────────────────
@@ -1689,8 +1826,11 @@ function listenNotifications(){
       // Just ignore pings but they cause toast spam
       showToast('📶 ping','info');
     } else if(n.type==='incoming_call'){
-      // Show incoming call overlay
+      // Show incoming call overlay (room-based)
       showIncomingCall(n.from,n.room);
+    } else if(n.type==='incoming_dm_call'){
+      // Show incoming DM call overlay
+      showIncomingCall(n.from,null);
     } else if(n.type==='banned'){
       showToast('⛔ Ты забанен администратором','err');
       setTimeout(()=>doLogout(),2000);
@@ -1718,6 +1858,10 @@ function showToast(msg,type='info'){
 let callPeer=null,callStream=null,incomingCall=null,incomingCallData=null;
 
 let lastCallTime={};
+let dmCallActive=false;
+let dmCallPeer=null;
+let dmCallNick='';
+
 function callFriendByNick(nick){
   // Prevent spam - 5 second cooldown per user
   const now=Date.now();
@@ -1728,33 +1872,217 @@ function callFriendByNick(nick){
   }
   lastCallTime[nick]=now;
   
-  // Open a private voice room with that friend
-  const roomName='call_'+[ns(MN),ns(nick)].sort().join('_');
+  // Start DM call directly without switching views
+  dmCallNick=nick;
+  dmCallActive=true;
+  $('dmCallUI').classList.remove('hidden');
+  $('dmCallStatus').textContent='Звоним...';
+  
   showToast('📞 Звоним @'+nick+'...','info');
+  
   // Notify friend via Firebase
-  db.ref('notifications/'+ns(nick)).push({type:'incoming_call',from:MN,room:roomName,ts:Date.now()});
-  // Auto-join the room
-  $('roomIn').value=roomName;
-  setTimeout(()=>joinRoom(),300);
+  db.ref('notifications/'+ns(nick)).push({
+    type:'incoming_dm_call',
+    from:MN,
+    ts:Date.now()
+  });
+  
+  // Initialize peer connection for DM call
+  initDMCall(nick);
 }
+
+async function initDMCall(nick){
+  if(!myPeer){
+    // Create peer if not exists
+    const pid=hp(MN+Date.now());
+    myPeer=new Peer(pid,{
+      host:'0.peerjs.com',
+      port:443,
+      path:'/',
+      secure:true,
+      config:{
+        iceServers:[
+          {urls:'stun:stun.l.google.com:19302'},
+          {urls:'stun:stun1.l.google.com:19302'}
+        ]
+      }
+    });
+    
+    await new Promise((resolve)=>{
+      myPeer.on('open',()=>resolve());
+      myPeer.on('error',(e)=>{console.error('Peer error:',e);resolve();});
+    });
+  }
+  
+  // Get friend's peer ID from presence
+  const snap=await db.ref('presence/'+ns(nick)).get();
+  if(!snap.exists()){
+    showToast('❌ @'+nick+' не в сети','err');
+    hangupDMCall();
+    return;
+  }
+  
+  const friendData=snap.val();
+  if(!friendData.peerId){
+    showToast('❌ Не удалось подключиться','err');
+    hangupDMCall();
+    return;
+  }
+  
+  // Get local stream
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+  }catch(e){
+    showToast('❌ Нет доступа к микрофону','err');
+    hangupDMCall();
+    return;
+  }
+  
+  // Call friend
+  const call=myPeer.call(friendData.peerId,localStream,{metadata:{nick:MN,type:'dm_call'}});
+  dmCallPeer=call;
+  
+  call.on('stream',(remoteStream)=>{
+    $('dmCallStatus').textContent='В звонке с @'+nick;
+    const audio=new Audio();
+    audio.srcObject=remoteStream;
+    audio.play();
+  });
+  
+  call.on('close',()=>{
+    hangupDMCall();
+  });
+}
+
+function toggleDMMic(){
+  if(!localStream)return;
+  isMuted=!isMuted;
+  localStream.getAudioTracks().forEach(t=>t.enabled=!isMuted);
+  $('dmMicBtn').classList.toggle('mut',isMuted);
+}
+
+function hangupDMCall(){
+  dmCallActive=false;
+  dmCallNick='';
+  $('dmCallUI').classList.add('hidden');
+  
+  if(dmCallPeer){
+    dmCallPeer.close();
+    dmCallPeer=null;
+  }
+  
+  if(localStream){
+    localStream.getTracks().forEach(t=>t.stop());
+    localStream=null;
+  }
+  
+  isMuted=false;
+  $('dmMicBtn').classList.remove('mut');
+}
+
 function callFriend(){
   const nick=$('dmCallBtn').dataset.nick||CDN;
   if(nick)callFriendByNick(nick);
 }
+
 function showIncomingCall(from,room){
-  incomingCallData={from,room};
-  $('callAvTxt').textContent=from.slice(0,2).toUpperCase();
-  $('callName').textContent='@'+from;
-  $('callSub').textContent='входящий звонок';
-  $('CALLOVER').classList.add('on');
+  // Check if it's a DM call or room call
+  if(room){
+    // Old room-based call
+    incomingCallData={from,room};
+    $('callAvTxt').textContent=from.slice(0,2).toUpperCase();
+    $('callName').textContent='@'+from;
+    $('callSub').textContent='входящий звонок';
+    $('CALLOVER').classList.add('on');
+  }else{
+    // New DM call
+    incomingCallData={from,isDM:true};
+    $('callAvTxt').textContent=from.slice(0,2).toUpperCase();
+    $('callName').textContent='@'+from;
+    $('callSub').textContent='входящий звонок';
+    $('CALLOVER').classList.add('on');
+  }
 }
+
 function acceptCall(){
   if(!incomingCallData)return;
   $('CALLOVER').classList.remove('on');
-  $('roomIn').value=incomingCallData.room;
-  setTimeout(()=>joinRoom(),200);
-  incomingCallData=null;
+  
+  if(incomingCallData.isDM){
+    // Accept DM call
+    const from=incomingCallData.from;
+    incomingCallData=null;
+    
+    // Open DM with that user
+    openDM(from);
+    
+    // Start call
+    dmCallNick=from;
+    dmCallActive=true;
+    $('dmCallUI').classList.remove('hidden');
+    $('dmCallStatus').textContent='Подключение...';
+    
+    // Answer the call
+    answerDMCall(from);
+  }else{
+    // Old room-based call
+    $('roomIn').value=incomingCallData.room;
+    setTimeout(()=>joinRoom(),200);
+    incomingCallData=null;
+  }
 }
+
+async function answerDMCall(from){
+  if(!myPeer){
+    const pid=hp(MN+Date.now());
+    myPeer=new Peer(pid,{
+      host:'0.peerjs.com',
+      port:443,
+      path:'/',
+      secure:true,
+      config:{
+        iceServers:[
+          {urls:'stun:stun.l.google.com:19302'},
+          {urls:'stun:stun1.l.google.com:19302'}
+        ]
+      }
+    });
+    
+    await new Promise((resolve)=>{
+      myPeer.on('open',()=>resolve());
+      myPeer.on('error',(e)=>{console.error('Peer error:',e);resolve();});
+    });
+  }
+  
+  // Get local stream
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+  }catch(e){
+    showToast('❌ Нет доступа к микрофону','err');
+    hangupDMCall();
+    return;
+  }
+  
+  // Listen for incoming call
+  myPeer.on('call',(call)=>{
+    if(call.metadata?.type==='dm_call'&&call.metadata?.nick===from){
+      call.answer(localStream);
+      dmCallPeer=call;
+      
+      call.on('stream',(remoteStream)=>{
+        $('dmCallStatus').textContent='В звонке с @'+from;
+        const audio=new Audio();
+        audio.srcObject=remoteStream;
+        audio.play();
+      });
+      
+      call.on('close',()=>{
+        hangupDMCall();
+      });
+    }
+  });
+}
+
 function declineCall(){
   $('CALLOVER').classList.remove('on');
   incomingCallData=null;
@@ -1989,37 +2317,248 @@ function hideRemoteSS(){
   if(!$('mySS').classList.contains('on'))$('ssEmpty').style.display='';
 }
 let ssOpt='screen',ssQ='720';
-function openSSPicker(){if(screenStream){stopSS();return;}$('ssModal').classList.remove('hidden');}
+let selectedSourceId = null; // Store selected source for Electron
+
+async function openSSPicker(){
+  if(screenStream){stopSS();return;}
+  // For Electron, show source picker directly
+  if(window.electronAPI){
+    try{
+      console.log('Opening Electron source picker...');
+      const sources=await window.electronAPI.getDesktopSources();
+      console.log('Sources received:', sources);
+      if(!sources||sources.length===0){
+        console.error('No sources available, falling back to web API');
+        sysMsg('⚠ используется веб-режим');
+        // Fallback to web mode
+        $('ssModal').classList.remove('hidden');
+        return;
+      }
+      console.log('Showing picker with', sources.length, 'sources');
+      selectedSourceId = await showElectronSourcePicker(sources);
+      if(!selectedSourceId){
+        console.log('Source selection cancelled');
+        sysMsg('⚠ демонстрация отменена');
+        return;
+      }
+      console.log('Selected source:', selectedSourceId);
+      // Start sharing immediately after source selection
+      await startSS();
+    }catch(e){
+      console.error('Source picker error:',e);
+      sysMsg('⚠ ошибка: ' + e.message);
+      // Fallback to web mode
+      $('ssModal').classList.remove('hidden');
+    }
+  }else{
+    // For web, show quality picker modal
+    $('ssModal').classList.remove('hidden');
+  }
+}
 function closeSSModal(){$('ssModal').classList.add('hidden');}
 function setSSOpt(s){ssOpt=s;['ssOS','ssOW','ssOT'].forEach((id,i)=>$(id).classList.toggle('sel',['screen','window','tab'][i]===s));}
 function setQ(q){ssQ=q;['qAu','q72','q10','qLo'].forEach((id,i)=>$(id).classList.toggle('sel',['auto','720','1080','low'][i]===q));}
+
+// ── ELECTRON SOURCE PICKER ─────────────────────────────────
+let sourcePickerResolve = null;
+let allSources = [];
+let currentSourceFilter = 'screen';
+let ssQuality = '720'; // 480, 720, 1080, source
+let ssFPS = '30'; // 15, 30, 60
+
+function filterSources(type) {
+  currentSourceFilter = type;
+  ['srcTabScreen', 'srcTabWindow'].forEach((id, i) => {
+    $(id).classList.toggle('sel', ['screen', 'window'][i] === type);
+  });
+  
+  const list = $('sourcePickerList');
+  list.innerHTML = '';
+  
+  const filtered = allSources.filter(s => {
+    if (type === 'screen') return s.id.startsWith('screen');
+    if (type === 'window') return !s.id.startsWith('screen');
+    return true;
+  });
+  
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mu);font-size:13px">Нет доступных источников</div>';
+    return;
+  }
+  
+  filtered.forEach((source, index) => {
+    const item = document.createElement('div');
+    item.className = 'source-item';
+    item.onclick = () => selectSourceItem(source.id, item);
+    
+    const thumb = document.createElement('img');
+    thumb.className = 'source-thumb';
+    thumb.src = source.thumbnail;
+    thumb.onerror = () => console.error('Failed to load thumbnail for', source.name);
+    
+    const info = document.createElement('div');
+    info.className = 'source-info';
+    
+    const name = document.createElement('div');
+    name.className = 'source-name';
+    name.textContent = source.name;
+    
+    const typeLabel = document.createElement('div');
+    typeLabel.className = 'source-type';
+    typeLabel.textContent = source.id.startsWith('screen') ? '🖥 Экран' : '🪟 Окно';
+    
+    info.appendChild(name);
+    info.appendChild(typeLabel);
+    item.appendChild(thumb);
+    item.appendChild(info);
+    list.appendChild(item);
+  });
+}
+
+function selectSourceItem(sourceId, itemElement) {
+  // Remove previous selection
+  document.querySelectorAll('.source-item').forEach(el => el.classList.remove('selected'));
+  // Add selection to clicked item
+  itemElement.classList.add('selected');
+  
+  // Start screen share immediately
+  selectedSourceId = sourceId;
+  closeSourcePicker();
+  if (sourcePickerResolve) {
+    const resolve = sourcePickerResolve;
+    sourcePickerResolve = null;
+    resolve(sourceId);
+  }
+}
+
+function setSSQuality(quality) {
+  ssQuality = quality;
+  ['q480', 'q720', 'q1080', 'qSource'].forEach((id, i) => {
+    $(id).classList.toggle('sel', ['480', '720', '1080', 'source'][i] === quality);
+  });
+}
+
+function setSSFPS(fps) {
+  ssFPS = fps;
+  ['fps15', 'fps30', 'fps60'].forEach((id, i) => {
+    $(id).classList.toggle('sel', ['15', '30', '60'][i] === fps);
+  });
+}
+
+function showElectronSourcePicker(sources) {
+  return new Promise((resolve) => {
+    console.log('showElectronSourcePicker called with', sources.length, 'sources');
+    sourcePickerResolve = resolve;
+    allSources = sources;
+    
+    const list = $('sourcePickerList');
+    if(!list){
+      console.error('sourcePickerList element not found!');
+      resolve(null);
+      return;
+    }
+    
+    // Filter and show sources
+    filterSources(currentSourceFilter);
+    
+    const modal = $('sourcePickerModal');
+    if(!modal){
+      console.error('sourcePickerModal element not found!');
+      resolve(null);
+      return;
+    }
+    modal.classList.remove('hidden');
+    
+    console.log('Modal shown with', sources.length, 'sources');
+  });
+}
+
+function selectSource(sourceId) {
+  console.log('Source selected:', sourceId);
+  if (sourcePickerResolve) {
+    const resolve = sourcePickerResolve;
+    sourcePickerResolve = null;
+    $('sourcePickerModal').classList.add('hidden');
+    resolve(sourceId);
+  }
+}
+
+function closeSourcePicker() {
+  console.log('Closing source picker');
+  $('sourcePickerModal').classList.add('hidden');
+  if (sourcePickerResolve) {
+    console.log('Resolving with null (cancelled)');
+    sourcePickerResolve(null);
+    sourcePickerResolve = null;
+  }
+}
 async function startSS(){
   closeSSModal();
-  const w=ssQ==='1080'?1920:ssQ==='low'?854:1280,h=ssQ==='1080'?1080:ssQ==='low'?480:720;
+  
+  // Calculate resolution based on quality setting
+  let w, h;
+  if (ssQuality === '480') {
+    w = 854; h = 480;
+  } else if (ssQuality === '720') {
+    w = 1280; h = 720;
+  } else if (ssQuality === '1080') {
+    w = 1920; h = 1080;
+  } else if (ssQuality === 'source') {
+    w = 3840; h = 2160; // Max resolution, will use source
+  }
+  
+  // Get FPS
+  const fps = parseInt(ssFPS);
+  
   try{
-    // For Electron, use desktopCapturer if available
-    if(window.electronAPI){
-      const sources=await window.electronAPI.getDesktopSources();
-      if(!sources||sources.length===0){sysMsg('⚠ нет доступных источников');return;}
-      const sourceId=sources[0].id;
-      screenStream=await navigator.mediaDevices.getUserMedia({
-        audio:false,
-        video:{
-          mandatory:{
-            chromeMediaSource:'desktop',
-            chromeMediaSourceId:sourceId,
-            minWidth:w,
-            maxWidth:w,
-            minHeight:h,
-            maxHeight:h
+    // For Electron with selected source
+    if(window.electronAPI && selectedSourceId){
+      console.log('Starting screen share:', {source: selectedSourceId, quality: ssQuality, fps: ssFPS});
+      
+      const constraints = {
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: selectedSourceId
           }
         }
-      });
+      };
+      
+      // Add resolution constraints if not source quality
+      if (ssQuality !== 'source') {
+        constraints.video.mandatory.minWidth = w;
+        constraints.video.mandatory.maxWidth = w;
+        constraints.video.mandatory.minHeight = h;
+        constraints.video.mandatory.maxHeight = h;
+      }
+      
+      // Add FPS constraint
+      constraints.video.mandatory.minFrameRate = fps;
+      constraints.video.mandatory.maxFrameRate = fps;
+      
+      screenStream = await navigator.mediaDevices.getUserMedia(constraints);
+      selectedSourceId = null; // Reset after use
     }else{
-      screenStream=await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:w},height:{ideal:h},frameRate:{ideal:30},cursor:'always'},audio:false});
+      // For web or fallback mode
+      console.log('Starting screen share with getDisplayMedia');
+      screenStream=await navigator.mediaDevices.getDisplayMedia({
+        video:{
+          width:{ideal:w},
+          height:{ideal:h},
+          frameRate:{ideal:fps},
+          cursor:'always'
+        },
+        audio:false
+      });
     }
   }
-  catch(e){sysMsg('⚠ демонстрация отменена');return;}
+  catch(e){
+    console.error('Screen share error:',e);
+    sysMsg('⚠ демонстрация отменена');
+    return;
+  }
+  
   $('mySSv').srcObject=screenStream;$('mySSv').play().catch(()=>{});
   $('mySS').classList.add('on');$('ssEmpty').style.display='none';$('ssBtn').classList.add('act');
   Object.entries(peers).forEach(([pid,p])=>{
@@ -2027,7 +2566,7 @@ async function startSS(){
     if(p.dataConn?.open)p.dataConn.send({type:'screen_start',nick:MN});
   });
   screenStream.getVideoTracks()[0].onended=()=>stopSS();
-  sysMsg('📺 ты начал демонстрацию');
+  sysMsg(`📺 демонстрация ${ssQuality}p @ ${ssFPS} FPS`);
 }
 function stopSS(silent){
   if(!screenStream)return;
@@ -2320,12 +2859,27 @@ window.addEventListener('load',()=>{
 });
 
 // ── AUTO-UPDATE ────────────────────────────────────────────
-const APP_VERSION='1.3.1';
+const APP_VERSION='1.3.2';
 
 // ── UPDATE NOTIFICATION BADGE ──────────────────────────────
 let updateAvailable = false;
 let updateVersion = null;
 let updateUrl = null;
+
+// ── VERSION COMPARISON ─────────────────────────────────────
+function compareVersions(v1, v2) {
+  // Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 > p2) return 1;
+    if (p1 < p2) return -1;
+  }
+  return 0;
+}
 
 async function checkForUpdatesWithBadge() {
   try {
@@ -2334,7 +2888,8 @@ async function checkForUpdatesWithBadge() {
       const latestVersion = snap.val().version;
       updateUrl = snap.val().url || 'https://whiteblacknew.github.io/dis-russia/';
       
-      if (latestVersion && latestVersion !== APP_VERSION) {
+      // Only show update if latest version is NEWER than current
+      if (latestVersion && compareVersions(latestVersion, APP_VERSION) > 0) {
         updateAvailable = true;
         updateVersion = latestVersion;
         showUpdateBadge();
@@ -2397,6 +2952,95 @@ function showUpdateNotification(version,url){
     </div>
   `;
   document.body.appendChild(div);
+}
+
+// ── ELECTRON AUTO-UPDATER ──────────────────────────────────
+function initElectronUpdater() {
+  console.log('Initializing Electron auto-updater...');
+  
+  // Listen for update available
+  window.electronAPI.onUpdateAvailable((info) => {
+    console.log('Update available:', info.version);
+    showUpdateModal(info.version);
+  });
+  
+  // Listen for download progress
+  window.electronAPI.onUpdateDownloadProgress((progress) => {
+    console.log('Download progress:', progress.percent);
+    updateDownloadProgress(progress.percent);
+  });
+  
+  // Listen for update downloaded
+  window.electronAPI.onUpdateDownloaded((info) => {
+    console.log('Update downloaded:', info.version);
+    showUpdateReadyModal();
+  });
+}
+
+function showUpdateModal(version) {
+  $('updateVersionText').textContent = version;
+  $('updateModal').classList.remove('hidden');
+}
+
+function closeUpdateModal() {
+  $('updateModal').classList.add('hidden');
+  $('updateProgress').style.display = 'none';
+  $('updateProgressBar').style.width = '0%';
+  $('updateProgressText').textContent = '0%';
+}
+
+async function downloadAndInstallUpdate() {
+  const downloadBtn = $('updateDownloadBtn');
+  const cancelBtn = $('updateCancelBtn');
+  const progressDiv = $('updateProgress');
+  
+  // Disable buttons and show progress
+  downloadBtn.disabled = true;
+  downloadBtn.textContent = 'Загрузка...';
+  cancelBtn.disabled = true;
+  progressDiv.style.display = 'block';
+  
+  try {
+    const result = await window.electronAPI.downloadUpdate();
+    if (!result.success) {
+      showToast('❌ Ошибка загрузки обновления', 'err');
+      closeUpdateModal();
+    }
+  } catch (e) {
+    console.error('Download update error:', e);
+    showToast('❌ Ошибка загрузки обновления', 'err');
+    closeUpdateModal();
+  }
+}
+
+function updateDownloadProgress(percent) {
+  const progressBar = $('updateProgressBar');
+  const progressText = $('updateProgressText');
+  
+  progressBar.style.width = percent + '%';
+  progressText.textContent = Math.round(percent) + '%';
+}
+
+function showUpdateReadyModal() {
+  const downloadBtn = $('updateDownloadBtn');
+  const cancelBtn = $('updateCancelBtn');
+  
+  downloadBtn.textContent = 'Установить и перезапустить';
+  downloadBtn.disabled = false;
+  downloadBtn.onclick = installUpdate;
+  cancelBtn.disabled = false;
+  cancelBtn.textContent = 'Установить при выходе';
+  
+  $('updateProgress').style.display = 'none';
+  showToast('✅ Обновление загружено!', 'ok');
+}
+
+async function installUpdate() {
+  try {
+    await window.electronAPI.installUpdate();
+  } catch (e) {
+    console.error('Install update error:', e);
+  }
 }
 </script>
 </body>
