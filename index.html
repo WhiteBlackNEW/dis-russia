@@ -1028,40 +1028,43 @@ const ADMIN='whiteblack';
 const PEERJS_SERVERS=[
   {host:'0.peerjs.com',port:443,path:'/',secure:true},
   {host:'peerjs-server.herokuapp.com',port:443,path:'/',secure:true},
-  {host:'peerjs.92k.de',port:443,path:'/',secure:true}
+  {host:'peerjs.92k.de',port:443,path:'/',secure:true},
+  {host:'peerjs-server.com',port:443,path:'/',secure:true},
+  {host:'peer.walkerservers.com',port:443,path:'/',secure:true},
+  {host:'peer-server.glitch.me',port:443,path:'/',secure:true}
 ];
 let currentServerIndex=getSetting('peerServerIndex',0);
+let peerInitialized=false;
+
+// Enhanced ICE servers with TURN for better connectivity
+const ICE_SERVERS = [
+  // Google STUN servers
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun1.l.google.com:19302'},
+  {urls:'stun:stun2.l.google.com:19302'},
+  {urls:'stun:stun3.l.google.com:19302'},
+  {urls:'stun:stun4.l.google.com:19302'},
+  // Public STUN servers
+  {urls:'stun:stun.voipbuster.com'},
+  {urls:'stun:stun.voipstunt.com'},
+  {urls:'stun:stun.ekiga.net'},
+  {urls:'stun:stun.ideasip.com'},
+  {urls:'stun:stun.schlund.de'},
+  {urls:'stun:stun.stunprotocol.org:3478'},
+  {urls:'stun:stun.softjoys.com'},
+  {urls:'stun:stun.voiparound.com'},
+  // Free TURN servers (public, may be slow but work through NAT)
+  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+];
+
 const PC={
   ...PEERJS_SERVERS[currentServerIndex],
   debug:0,
-  config:{iceServers:[
-    // Google STUN servers
-    {urls:'stun:stun.l.google.com:19302'},
-    {urls:'stun:stun1.l.google.com:19302'},
-    {urls:'stun:stun2.l.google.com:19302'},
-    {urls:'stun:stun3.l.google.com:19302'},
-    {urls:'stun:stun4.l.google.com:19302'},
-    // Russian STUN servers
-    {urls:'stun:stun.voipbuster.com'},
-    {urls:'stun:stun.voipstunt.com'},
-    {urls:'stun:stun.voxgratia.org'},
-    {urls:'stun:stun.ekiga.net'},
-    {urls:'stun:stun.ideasip.com'},
-    {urls:'stun:stun.schlund.de'},
-    {urls:'stun:stun.voiparound.com'},
-    {urls:'stun:stun.stunprotocol.org:3478'},
-    {urls:'stun:stun.sipnet.net:3478'},
-    {urls:'stun:stun.sipnet.ru:3478'},
-    {urls:'stun:stun.comtube.ru:3478'},
-    {urls:'stun:stun.comtube.com:3478'},
-    // TURN servers
-    {urls:'turn:a.relay.metered.ca:80',username:'free',credential:'free'},
-    {urls:'turn:a.relay.metered.ca:443',username:'free',credential:'free'},
-    {urls:'turn:a.relay.metered.ca:443?transport=tcp',username:'free',credential:'free'},
-    {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-    {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'}
-  ]}
+  config:{iceServers:ICE_SERVERS}
 };
+
 function switchPeerServer(){
   currentServerIndex=(currentServerIndex+1)%PEERJS_SERVERS.length;
   setSetting('peerServerIndex',currentServerIndex);
@@ -1197,48 +1200,68 @@ async function initApp(){
   
   // Create peer for DM calls and save ID to presence
   const initPeer = async () => {
-    if(myPeer) return;
+    if(myPeer && peerInitialized) return;
     
     const pid=hp(MN+Date.now()+Math.random());
     myPeer=new Peer(pid,{
-      host:'0.peerjs.com',
-      port:443,
-      path:'/',
-      secure:true,
-      config:{
-        iceServers:[
-          {urls:'stun:stun.l.google.com:19302'},
-          {urls:'stun:stun1.l.google.com:19302'},
-          {urls:'stun:stun2.l.google.com:19302'}
-        ]
-      }
+      ...PEERJS_SERVERS[currentServerIndex],
+      debug:2,
+      config:{iceServers:ICE_SERVERS}
     });
     
     return new Promise((resolve) => {
       myPeer.on('open',(id)=>{
-        console.log('Peer opened with ID:', id);
+        console.log('✅ Peer opened with ID:', id);
+        peerInitialized=true;
         presRef.set({online:true,ts:Date.now(),peerId:id});
-        resolve();
+        resolve(true);
       });
       
       myPeer.on('error',(e)=>{
-        console.error('Peer error:',e);
-        // Try to set presence anyway
-        presRef.set({online:true,ts:Date.now()});
-        resolve();
+        console.error('❌ Peer error:',e);
+        peerInitialized=false;
+        // Try next server
+        if(e.type==='network'||e.type==='server-error'||e.type==='socket-error'){
+          currentServerIndex=(currentServerIndex+1)%PEERJS_SERVERS.length;
+          setSetting('peerServerIndex',currentServerIndex);
+          console.log('🔄 Switching to server', currentServerIndex+1);
+          myPeer=null;
+          setTimeout(()=>initPeer().then(resolve),1000);
+        }else{
+          presRef.set({online:true,ts:Date.now()});
+          resolve(false);
+        }
       });
       
       // Listen for incoming DM calls
       myPeer.on('call',(call)=>{
+        console.log('📞 Incoming call:', call.metadata);
         if(call.metadata?.type==='dm_call'){
-          console.log('Incoming DM call from:', call.metadata.nick);
+          console.log('📞 Incoming DM call from:', call.metadata.nick);
+          showIncomingCall(call.metadata.nick);
+          // Store the call for answering
+          incomingCall=call;
         }
       });
+      
+      // Timeout after 15 seconds
+      setTimeout(() => {
+        if(!peerInitialized){
+          console.error('⏱ Peer connection timeout');
+          resolve(false);
+        }
+      }, 15000);
     });
   };
   
   // Initialize peer and wait for it
+  console.log('🔌 Initializing peer connection...');
   await initPeer();
+  if(peerInitialized){
+    console.log('✅ Peer ready for DM calls');
+  }else{
+    console.warn('⚠ Peer initialization failed, DM calls may not work');
+  }
   
   presRef.onDisconnect().remove();
   setInterval(()=>{if(CU&&myPeer)presRef.set({online:true,ts:Date.now(),peerId:myPeer.id});},20000);
@@ -2013,19 +2036,27 @@ function callFriendByNick(nick){
 }
 
 async function initDMCall(nick){
-  console.log('initDMCall called, myPeer:', myPeer, 'myPeer.id:', myPeer?.id);
+  console.log('📞 initDMCall called for:', nick);
+  console.log('📊 Peer status:', {peer:!!myPeer, id:myPeer?.id, initialized:peerInitialized});
   
-  if(!myPeer){
+  // Wait for peer to be ready
+  if(!peerInitialized){
     showToast('⏳ Подключение...','info');
-    // Wait a bit for peer to initialize
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    let attempts=0;
+    while(!peerInitialized && attempts<10){
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
   }
   
-  if(!myPeer || !myPeer.id){
+  if(!myPeer || !myPeer.id || !peerInitialized){
     showToast('❌ Ошибка подключения. Перезайди в приложение','err');
+    console.error('❌ Peer not ready:', {peer:!!myPeer, id:myPeer?.id, initialized:peerInitialized});
     hangupDMCall();
     return;
   }
+  
+  console.log('✅ Peer ready, getting friend data...');
   
   // Get friend's peer ID from presence
   const snap=await db.ref('presence/'+ns(nick)).get();
@@ -2036,7 +2067,7 @@ async function initDMCall(nick){
   }
   
   const friendData=snap.val();
-  console.log('Friend data:', friendData);
+  console.log('👤 Friend data:', friendData);
   
   if(!friendData.peerId){
     showToast('❌ Друг не поддерживает звонки (старая версия)','err');
@@ -2044,13 +2075,14 @@ async function initDMCall(nick){
     return;
   }
   
-  console.log('Calling friend:', nick, 'with peerId:', friendData.peerId);
+  console.log('📞 Calling friend:', nick, 'with peerId:', friendData.peerId);
   
   // Get local stream
   try{
     localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    console.log('🎤 Got local stream');
   }catch(e){
-    console.error('Microphone error:', e);
+    console.error('❌ Microphone error:', e);
     showToast('❌ Нет доступа к микрофону','err');
     hangupDMCall();
     return;
@@ -2058,29 +2090,41 @@ async function initDMCall(nick){
   
   // Call friend
   try{
+    console.log('📞 Creating call to:', friendData.peerId);
     const call=myPeer.call(friendData.peerId,localStream,{metadata:{nick:MN,type:'dm_call'}});
     dmCallPeer=call;
+    console.log('✅ Call created');
     
     call.on('stream',(remoteStream)=>{
-      console.log('Received remote stream');
+      console.log('🔊 Received remote stream');
       $('dmCallStatus').textContent='В звонке с @'+nick;
       const audio=new Audio();
       audio.srcObject=remoteStream;
       audio.play();
+      showToast('✅ Подключено к @'+nick,'info');
     });
     
     call.on('close',()=>{
-      console.log('Call closed');
+      console.log('📴 Call closed');
       hangupDMCall();
     });
     
     call.on('error',(e)=>{
-      console.error('Call error:',e);
+      console.error('❌ Call error:',e);
       showToast('❌ Ошибка звонка: ' + e.type,'err');
       hangupDMCall();
     });
+    
+    // Timeout for connection
+    setTimeout(()=>{
+      if(dmCallPeer && !dmCallPeer.open){
+        console.error('⏱ Call connection timeout');
+        showToast('❌ Не удалось подключиться','err');
+        hangupDMCall();
+      }
+    },10000);
   }catch(e){
-    console.error('Call creation error:', e);
+    console.error('❌ Call creation error:', e);
     showToast('❌ Не удалось позвонить','err');
     hangupDMCall();
   }
@@ -2166,55 +2210,56 @@ function acceptCall(){
 }
 
 async function answerDMCall(from){
-  if(!myPeer || !myPeer.id){
+  console.log('📞 Answering DM call from:', from);
+  console.log('📊 Peer status:', {peer:!!myPeer, id:myPeer?.id, initialized:peerInitialized});
+  
+  if(!myPeer || !myPeer.id || !peerInitialized){
     showToast('❌ Ошибка подключения','err');
     hangupDMCall();
     return;
   }
   
-  console.log('Answering DM call from:', from);
-  
   // Get local stream
   try{
     localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    console.log('🎤 Got local stream');
   }catch(e){
+    console.error('❌ Microphone error:', e);
     showToast('❌ Нет доступа к микрофону','err');
     hangupDMCall();
     return;
   }
   
-  // Listen for incoming call (peer already has listener from initApp)
-  const handleCall = (call) => {
-    console.log('Incoming call:', call.metadata);
-    if(call.metadata?.type==='dm_call'&&call.metadata?.nick===from){
-      console.log('Answering call from:', from);
-      call.answer(localStream);
-      dmCallPeer=call;
-      
-      call.on('stream',(remoteStream)=>{
-        console.log('Received remote stream');
-        $('dmCallStatus').textContent='В звонке с @'+from;
-        const audio=new Audio();
-        audio.srcObject=remoteStream;
-        audio.play();
-      });
-      
-      call.on('close',()=>{
-        console.log('Call closed');
-        hangupDMCall();
-      });
-      
-      call.on('error',(e)=>{
-        console.error('Call error:',e);
-        hangupDMCall();
-      });
-      
-      // Remove listener after handling
-      myPeer.off('call', handleCall);
-    }
-  };
-  
-  myPeer.on('call', handleCall);
+  // Answer the stored incoming call
+  if(incomingCall){
+    console.log('✅ Answering stored call');
+    incomingCall.answer(localStream);
+    dmCallPeer=incomingCall;
+    incomingCall=null;
+    
+    dmCallPeer.on('stream',(remoteStream)=>{
+      console.log('🔊 Received remote stream');
+      $('dmCallStatus').textContent='В звонке с @'+from;
+      const audio=new Audio();
+      audio.srcObject=remoteStream;
+      audio.play();
+      showToast('✅ Подключено к @'+from,'info');
+    });
+    
+    dmCallPeer.on('close',()=>{
+      console.log('📴 Call closed');
+      hangupDMCall();
+    });
+    
+    dmCallPeer.on('error',(e)=>{
+      console.error('❌ Call error:',e);
+      hangupDMCall();
+    });
+  }else{
+    console.error('❌ No incoming call to answer');
+    showToast('❌ Нет входящего звонка','err');
+    hangupDMCall();
+  }
 }
 
 function declineCall(){
@@ -2647,17 +2692,21 @@ async function startSS(){
   // Get FPS (default 30 if not set)
   const fps = parseInt(ssFPS) || 30;
   
+  console.log('📺 Starting screen share:', {quality, fps, selectedSource: selectedSourceId});
+  
   try{
     // For Electron with selected source
     if(window.electronAPI && selectedSourceId){
-      console.log('Starting screen share:', {source: selectedSourceId, quality: quality, fps: fps});
+      console.log('🖥 Using Electron source:', selectedSourceId);
       
       const constraints = {
         audio: false,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
-            chromeMediaSourceId: selectedSourceId
+            chromeMediaSourceId: selectedSourceId,
+            minFrameRate: fps,
+            maxFrameRate: fps
           }
         }
       };
@@ -2670,15 +2719,13 @@ async function startSS(){
         constraints.video.mandatory.maxHeight = h;
       }
       
-      // Add FPS constraint
-      constraints.video.mandatory.minFrameRate = fps;
-      constraints.video.mandatory.maxFrameRate = fps;
-      
+      console.log('📹 Constraints:', JSON.stringify(constraints, null, 2));
       screenStream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('✅ Got screen stream:', screenStream.id);
       selectedSourceId = null; // Reset after use
     }else{
       // For web or fallback mode
-      console.log('Starting screen share with getDisplayMedia');
+      console.log('🌐 Using web getDisplayMedia');
       screenStream=await navigator.mediaDevices.getDisplayMedia({
         video:{
           width:{ideal:w},
@@ -2688,22 +2735,49 @@ async function startSS(){
         },
         audio:false
       });
+      console.log('✅ Got screen stream:', screenStream.id);
     }
   }
   catch(e){
-    console.error('Screen share error:', e);
-    console.error('Error details:', e.name, e.message);
+    console.error('❌ Screen share error:', e);
+    console.error('Error details:', e.name, e.message, e.stack);
     sysMsg('⚠ демонстрация отменена: ' + e.message);
     return;
   }
   
+  console.log('📺 Setting up screen share UI and sending to peers...');
   $('mySSv').srcObject=screenStream;$('mySSv').play().catch(()=>{});
   $('mySS').classList.add('on');$('ssEmpty').style.display='none';$('ssBtn').classList.add('act');
+  
+  // Send screen stream to all peers
+  let sentCount=0;
   Object.entries(peers).forEach(([pid,p])=>{
-    if(myPeer){try{const call=myPeer.call(pid,screenStream,{metadata:{nick:MN,type:'screen'}});p.mySSCall=call;}catch(e){}}
-    if(p.dataConn?.open)p.dataConn.send({type:'screen_start',nick:MN});
+    if(myPeer){
+      try{
+        console.log('📤 Sending screen to peer:', pid);
+        const call=myPeer.call(pid,screenStream,{metadata:{nick:MN,type:'screen'}});
+        p.mySSCall=call;
+        sentCount++;
+        
+        call.on('error',(e)=>{
+          console.error('❌ Screen call error to', pid, ':', e);
+        });
+      }catch(e){
+        console.error('❌ Failed to call peer', pid, ':', e);
+      }
+    }
+    if(p.dataConn?.open){
+      p.dataConn.send({type:'screen_start',nick:MN});
+    }
   });
-  screenStream.getVideoTracks()[0].onended=()=>stopSS();
+  
+  console.log('✅ Screen sent to', sentCount, 'peers');
+  
+  screenStream.getVideoTracks()[0].onended=()=>{
+    console.log('📺 Screen track ended');
+    stopSS();
+  };
+  
   const qualityText = quality === 'source' ? 'Источник' : quality + 'p';
   sysMsg(`📺 демонстрация ${qualityText} @ ${fps} FPS`);
 }
