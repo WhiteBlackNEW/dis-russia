@@ -811,10 +811,33 @@ async function doReg(){
   if(nick.length<2){setAL('⚠ ник минимум 2 символа','err');return;}
   if(p.length<4){setAL('⚠ пароль минимум 4 символа','err');return;}
   if(p!==p2){setAL('⚠ пароли не совпадают','err');return;}
+  
+  // Anti-spam: check registration count from this session
+  const regCount=parseInt(sessionStorage.getItem('reg_count')||'0');
+  const regTime=parseInt(sessionStorage.getItem('reg_time')||'0');
+  const now=Date.now();
+  
+  // Reset counter after 1 hour
+  if(now-regTime>3600000){
+    sessionStorage.setItem('reg_count','0');
+    sessionStorage.setItem('reg_time',now.toString());
+  }
+  
+  // Max 3 registrations per hour
+  if(regCount>=3){
+    setAL('⚠ слишком много регистраций, подожди','err');
+    return;
+  }
+  
   setAL('— проверяем —');
   const s=await db.ref('users/'+ns(nick)).get();
   if(s.exists()){setAL('⚠ ник занят','err');return;}
-  await db.ref('users/'+ns(nick)).set({passHash:hp(p),createdAt:Date.now()});
+  await db.ref('users/'+ns(nick)).set({passHash:hp(p),createdAt:Date.now(),nick:nick});
+  
+  // Increment registration counter
+  sessionStorage.setItem('reg_count',(regCount+1).toString());
+  if(regCount===0)sessionStorage.setItem('reg_time',now.toString());
+  
   addSaved(nick);setAL('✓ готово!','ok');
   setTimeout(()=>loginAs(nick),400);
 }
@@ -1371,8 +1394,14 @@ async function renderAdmin(){
   panel.innerHTML='<div style="padding:14px;font-family:Space Mono,monospace;font-size:11px;color:var(--mu)">загружаем...</div>';
   const us=await db.ref('users').get();
   if(!us.exists()){panel.innerHTML='<div style="padding:14px;color:var(--mu)">нет пользователей</div>';return;}
-  const users={};us.forEach(c=>users[c.key]=c.val());
-  const nicks=Object.keys(users);
+  const users={};
+  const nicks=[];
+  us.forEach(c=>{
+    const userData=c.val();
+    const originalNick=userData.nick||c.key; // Use stored nick or key
+    users[originalNick]=userData;
+    nicks.push(originalNick);
+  });
   const pr=await db.ref('presence').get();
   const pres={};if(pr.exists())pr.forEach(c=>pres[c.key]=c.val());
   const isOnL=n=>{const p=pres[ns(n)];return p&&p.online&&(Date.now()-p.ts)<45000;};
